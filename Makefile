@@ -1,4 +1,5 @@
 all:
+	mkdir -p build
 	(cd fs_skel; rsync -a . ../build)
 	(cd kern; make)
 	(cd tools; make)
