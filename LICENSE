@@ -1,0 +1,14 @@
+This project is a conglomeration of code from
+various places.
+
+Most of the kernel code is `xv6` code and uses
+the `xv6` license. There is some `rosco` code
+in the kernel, too.
+
+The libraries and include files are from FreeBSD
+and are under a BSD license.
+
+The userland programs mostly come from FreeBSD.
+If an individual program doesn't have a specific
+copyright/license at the top of the source files,
+you can assume it's BSD licensed.

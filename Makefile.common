@@ -1,0 +1,17 @@
+# Header include directory
+INCLDIR=$(TOP_SRCDIR)/include
+
+CC= m68k-elf-gcc
+CFLAGS= -std=c11 -ffreestanding -ffunction-sections -fdata-sections \
+	-fomit-frame-pointer -Wall -Wextra -Wno-unused-function \
+	-I$(INCLDIR) -mcpu=68000 -march=68000 -mtune=68000 -O2
+
+AS= vasmm68k_mot
+ASFLAGS= -Felf -m68000 -quiet
+
+LD= m68k-elf-ld
+#LDFLAGS= --oformat=elf32-m68k  -z max-page-size=16 -z common-page-size=16
+
+GCCLIBDIR= $(HOMEBREW_CELLAR)/gcc-cross-m68k@13/13.3.0/lib/gcc/m68k-elf/13.3.0/m68000
+
+LIBDIR= $(TOP_SRCDIR)/lib
