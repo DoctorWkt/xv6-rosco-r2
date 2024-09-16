@@ -19,7 +19,7 @@ system at the moment. You will have to figure some things out yourself.
 
 ## Hardware Options
 
-As at mid-Sept '24, I'm finding the bit-band SD card very slow. I also really don't
+As at mid-Sept '24, I'm finding the bit-bang SD card very slow. I also really don't
 want to have to put in a relocating loader into the kernel. So I plan on designing
 an expansion board with 1M of RAM and a
 [CH375](https://www.electrodragon.com/product/ch375-module-reading-and-writing-u-diskusb-communicate/)
