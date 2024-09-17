@@ -112,7 +112,7 @@ void sys_exit()
   for (int i=0; i<NOFILE; i++)
     sys_close(i);
 
-  // Repen stdin, stdout, stderr
+  // Reopen stdin, stdout, stderr
   sys_open("/tty", O_RDONLY);
   sys_open("/tty", O_WRONLY);
   sys_open("/tty", O_WRONLY);
