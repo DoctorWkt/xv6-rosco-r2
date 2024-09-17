@@ -8,7 +8,9 @@ CFLAGS+= -nostdinc -nostdlib
 CFLAGS+= -L $(GCCLIBDIR) -L $(LIBDIR)
 LDLIBS= -lc -lgcc
 
-BINS= fred usertests sh fopen ls cat cal echo rm
+BINS= banner basename cal cat cksum cmp comm crc cut echo \
+	expand fopen fred grep head ln ls mkdir mv od pwd \
+	rm roff sh tail usertests wc
 
 # Lose the implicit compilation rule
 %: %.c
