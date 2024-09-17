@@ -12,14 +12,6 @@
 
 int realargc;			// Real argc after parsing the command
 
-// Close any open file descriptors on exit
-void myexit(int x) {
-  for (int fd = 0; fd < NFILE; fd++)
-    close(fd);
-  exit(x);
-}
-
-#if 1
 // Return true if the name matches the given pattern.
 // Only ? and * are recognised. This code from Russ Cox:
 // https://research.swtch.com/glob
@@ -72,7 +64,6 @@ int match(char *pattern, char *name) {
   // Matched all of pattern to all of name. Success.
   return (1);
 }
-#endif
 
 // Deal with redirections and pipelines in the current argv list
 void redirect(int argc, char *argv[]) {
@@ -135,7 +126,7 @@ void redirect(int argc, char *argv[]) {
       // Open the file.
       if ((fd = open(argv[i + 1], O_RDONLY)) == -1) {
 	cprintf("Cannot open %s\n", argv[i + 1]);
-	myexit(1);
+	exit(1);
       }
 
       // Close stdin and dup the fd down to stdin, then close the fd
@@ -155,7 +146,7 @@ void redirect(int argc, char *argv[]) {
       // Open the file.
       if ((fd = open(argv[i + 1], O_CREAT | O_TRUNC | O_WRONLY)) == -1) {
 	cprintf("Cannot open %s\n", argv[i + 1]);
-	myexit(1);
+	exit(1);
       }
 
       // Close stderr and dup the fd down to stderr, then close the fd
@@ -175,7 +166,7 @@ void redirect(int argc, char *argv[]) {
       // Open a temporary file for the output of this command
       if ((fd = open("/.pipedata", O_CREAT | O_TRUNC | O_WRONLY)) == -1) {
 	cprintf("Cannot open /.pipedata\n");
-	myexit(1);
+	exit(1);
       }
 
       // Close stdout and dup the fd down to stdout, then close the fd
@@ -186,7 +177,7 @@ void redirect(int argc, char *argv[]) {
       // Open a file to store the rest of the pipeline command
       if ((fd = open("/.pipecmd", O_CREAT | O_TRUNC | O_WRONLY)) == -1) {
 	cprintf("Cannot open /.pipecmd\n");
-	myexit(1);
+	exit(1);
       }
 
       // Set the arg count to before this token.
@@ -229,7 +220,7 @@ int parse(char *buf, char *argv[]) {
 
   // No arguments, just restart the shell
   if (wordc == 0)
-    myexit(0);
+    exit(0);
 
   // Copy the words into the argv list for now
   for (int i = 0; i < wordc && argc < MAXARG; i++) {
@@ -243,7 +234,6 @@ int parse(char *buf, char *argv[]) {
       continue;
     }
 
-#if 1
     // See if the word contains a pattern to match on, i.e. a '*' or '?'
     if ((index(wordlist[i], '?') != NULL)
 	|| (index(wordlist[i], '*') != NULL)) {
@@ -251,14 +241,14 @@ int parse(char *buf, char *argv[]) {
       // For now we can only pattern match in this directory
       if (index(wordlist[i], '/') != NULL) {
 	cprintf("Pattern matching only in this directory, sorry\n");
-	myexit(1);
+	exit(1);
       }
 
       // Search the current directory for any matches
       D = opendir(".");
       if (D == NULL) {
 	cprintf("Can't opendir .\n");
-	myexit(1);
+	exit(1);
       }
 
       // Process each entry
@@ -279,7 +269,6 @@ int parse(char *buf, char *argv[]) {
       free(D);
       continue;
     }
-#endif
 
     // Not a pattern or quoted word, add the word to the argv list
     argv[argc++] = wordlist[i];
@@ -292,88 +281,124 @@ char readlinebuf[100];
 
 // For now
 char *readline(char *prompt) {
-  int i=0;
+  int i = 0;
   char ch;
 
   write(1, prompt, strlen(prompt));
 
   while (1) {
-    read(0, &ch, 1); // write(1, &ch, 1);
-    if (ch=='\n' || ch=='\r') break;
+    read(0, &ch, 1);		// write(1, &ch, 1);
+    if (ch == '\n' || ch == '\r')
+      break;
 
-    if (i>=98) continue;
-    readlinebuf[i++]= ch;
+    if (i >= 98)
+      continue;
+    readlinebuf[i++] = ch;
   }
 
-  readlinebuf[i]= 0;
-  return(readlinebuf);
+  readlinebuf[i] = 0;
+  return (readlinebuf);
 }
 
 int main() {
-  int fd;
+  int fd, datafd;
   int argc;
   char *buf = NULL;
   char *argv[MAXARG + 1];	// The argument list
   char binbuf[MAXLIN];		// Used to prepend "/bin/" to commands
 
-  while (1) {
-    // Use readline() to get the input line
+  // See if there is a pipe command that we need to process
+  fd = open("/.pipecmd", O_RDONLY);
+  if (fd != -1) {
+    // Yes there is. Check that we have pipe data
+    datafd = open("/.pipedata", O_RDONLY);
+    if (datafd == -1) {
+      cprintf("error: pipe command but no pipe data\n");
+      unlink("/.pipecmd");
+      exit(1);
+    }
+
+    // Read in the command from the command file. NUL terminate it.
+    buf = (char *) malloc(MAXLIN);
+    if (buf == NULL) {
+      cprintf("malloc error\n");
+      exit(1);
+    }
+
+    int cnt = read(fd, buf, MAXLIN);
+    close(fd);
+    buf[cnt] = 0;
+
+    // Dup the pipe data to be stdin
+    close(0);
+    dup(datafd);
+    close(datafd);
+
+    // Now unlink both pipe files so they can be reused
+    unlink("/.pipecmd");
+    unlink("/.pipedata");
+  }
+
+  // Use readline() to get the input line if there is no pipeline command
+  if (buf == NULL) {
     buf = readline("$ ");
     cprintf("\n");
-
-    // Parse the input line, generating argv
-    argc = parse(buf, argv);
-
-    // See if the first argument is cd. If so, do the chdir and
-    // then go back to the top of the loop for the next command
-    if (!strcmp(argv[0], "cd")) {
-      if (argc == 2) {
-	if (chdir(argv[1]) == -1)
-	  cprintf("Cannot cd to %s\n", argv[1]);
-      }
-      continue;
-    }
-
-    // Try to open the argument.
-    if ((fd = open(argv[0], O_RDONLY)) == -1) {
-      // No such luck. Try putting "/bin/" on the front
-      strcpy(binbuf, "/bin/");
-      strcat(binbuf, argv[0]);
-      if ((fd = open(binbuf, O_RDONLY)) == -1) {
-	cprintf("%s: no such command\n", argv[0]);
-	continue;
-      }
-      argv[0] = binbuf;
-    }
-
-#if 0
-    // See if it's an executable: always start with 0x3406
-    kread(fd, &i, 2);
-    if (i != 0x3406) {
-      cprintf("%s: not an executable\n", argv[0]);
-      close(fd); continue;
-    }
-#endif
-    close(fd);
-
-    // Deal with any redirections
-    redirect(argc, argv);
-
-    // No arguments, loop back
-    if (argc==0) continue;
-
-    // Put a NULL at the end of the argv[] array
-    argv[realargc] = NULL;
-
-#if 0
-    // Debug
-    cprintf("sh argc %d\n", realargc);
-    for (i=0; i<realargc; i++)
-      cprintf("sh argv[%d] %s 0x%x\n", i, argv[i], argv[i]);
-#endif
-
-    // Now spawn the new program
-    spawn(realargc, argv);
   }
-  return (0);	// Should never be used
+
+  // Parse the input line, generating argv
+  argc = parse(buf, argv);
+
+  // See if the first argument is cd. If so, do the chdir and
+  // then exit() which will respawn the shell!
+  if (!strcmp(argv[0], "cd")) {
+    if (argc == 2) {
+      if (chdir(argv[1]) == -1)
+	cprintf("Cannot cd to %s\n", argv[1]);
+    }
+    exit(0);
+  }
+
+  // Try to open the argument.
+  if ((fd = open(argv[0], O_RDONLY)) == -1) {
+    // No such luck. Try putting "/bin/" on the front
+    strcpy(binbuf, "/bin/");
+    strcat(binbuf, argv[0]);
+    if ((fd = open(binbuf, O_RDONLY)) == -1) {
+      cprintf("%s: no such command\n", argv[0]);
+      exit(0);
+    }
+    argv[0] = binbuf;
+  }
+
+#if 0
+  // See if it's an executable: always start with 0x3406
+  kread(fd, &i, 2);
+  if (i != 0x3406) {
+    cprintf("%s: not an executable\n", argv[0]);
+    close(fd);
+    exit(0);
+  }
+#endif
+  close(fd);
+
+  // Deal with any redirections
+  redirect(argc, argv);
+
+  // No arguments, exit
+  if (argc == 0)
+    exit(0);
+
+  // Put a NULL at the end of the argv[] array
+  argv[realargc] = NULL;
+
+#if 0
+  // Debug
+  cprintf("sh argc %d\n", realargc);
+  for (i = 0; i < realargc; i++)
+    cprintf("sh argv[%d] %s 0x%x\n", i, argv[i], argv[i]);
+#endif
+
+  // Now spawn the new program
+  spawn(realargc, argv);
+  exit(0);			// Restart ourselves if the spawn() failed
 }
