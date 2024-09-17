@@ -299,7 +299,7 @@ int main(int argc, char *argv[]) {
     paint_screen(this);
 
     // Read a char from the keyboard
-    read(0, &ch, 1);
+    ch= consgetc() & 0xff;
     switch (ch) {
     case 'q':			// Quit the pager
     case EOF:

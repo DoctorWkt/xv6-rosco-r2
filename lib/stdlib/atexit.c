@@ -40,6 +40,7 @@ static char sccsid[] = "@(#)atexit.c	5.2 (Berkeley) 11/14/90";
 
 #include <stddef.h>
 #include <stdlib.h>
+#define __ATEXIT 1
 #include "atexit.h"
 
 /*

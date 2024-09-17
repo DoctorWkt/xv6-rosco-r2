@@ -42,4 +42,8 @@ struct atexit {
 	void (*fns[ATEXIT_SIZE])();	/* the table itself */
 };
 
+#ifdef __ATEXIT
 struct atexit *__atexit;	/* points to head of LIFO stack */
+#else
+extern struct atexit *__atexit;
+#endif
