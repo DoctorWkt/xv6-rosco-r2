@@ -6,12 +6,12 @@ libc.a:
 	(cd stdlib; make)
 	(cd string; make)
 	(cd locale; make)
-#	(cd other; make)
+	(cd other; make)
 	(cd regex; make)
 	(cd regexp; make)
 	(cd sys; make)
 	ar vr libc.a gen/*.o stdio/*.o stdlib/*.o string/*.o \
-		locale/*.o regex/*.o regexp/*.o sys/*.o
+		locale/*.o other/*.o regex/*.o regexp/*.o sys/*.o
 	ranlib libc.a
 
 libtermcap.a:

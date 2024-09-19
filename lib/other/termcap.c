@@ -29,7 +29,6 @@
  *   - Allow '#' comments in definition file		 [tgetent]
  */
 
-#include <lib.h>
 #include <termcap.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -317,7 +316,7 @@ int destline;
 int tputs(cp, affcnt, outc)
 register char *cp;
 int affcnt;
-_PROTOTYPE( void (*outc), (int ch));
+void *outc(int ch);
 {
   if (cp == (char *)NULL) return(1);
   /* Do any padding interpretation - left null for MINIX just now */

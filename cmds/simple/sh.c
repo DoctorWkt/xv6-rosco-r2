@@ -6,6 +6,7 @@
 #include <xv6/param.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <readline/readline.h>
 
 #define MAXARG 20		// Maximum number of arguments
 #define MAXLIN 100		// Maximum line size
@@ -277,6 +278,7 @@ int parse(char *buf, char *argv[]) {
   return (argc);
 }
 
+#if 0
 char readlinebuf[100];
 
 // For now
@@ -299,6 +301,7 @@ char *readline(char *prompt) {
   readlinebuf[i] = 0;
   return (readlinebuf);
 }
+#endif
 
 int main() {
   int fd, datafd;
