@@ -3,7 +3,7 @@ INCLDIR=$(TOP_SRCDIR)/include
 
 CC= m68k-elf-gcc
 CFLAGS= -std=c11 -ffreestanding -ffunction-sections -fdata-sections \
-	-fomit-frame-pointer -Wall -Wextra -Wno-unused-function \
+	-fomit-frame-pointer \
 	-I$(INCLDIR) -mcpu=68000 -march=68000 -mtune=68000 -O2
 
 AS= vasmm68k_mot
