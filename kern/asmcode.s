@@ -13,6 +13,7 @@ DUART_IMR equ	$F0000A
 ; TRAP11 vectors
 IRQ3_VECTOR   equ $6C
 TRAP11_VECTOR equ $AC
+TICK_VECTOR   equ $114
 
 ; CH375 Commands
 CMD_GET_STATUS  equ  $22
@@ -35,6 +36,16 @@ stop_timer::
     move.b  #$00,DUART_IMR
     rts
 
+; Increment the tick counter
+tick_handler::
+    addq.b #1,tick_cntr		; Increment the tick counter
+    cmpi.b #100,tick_cntr	; Is it 100?
+    bne.s  L2			; No, skip
+    clr.b tick_cntr		; Set the tick counter to zero
+    addq.l #1,epoch_time	; and increment the epoch time
+L2:
+    rte
+
 ; This is the interrupt handler for the CH375.
 ; Send a CMD_GET_STATUS to the device,
 ; read a byte of data and save it in the
@@ -44,10 +55,11 @@ irq3_handler::
 	move.b CHDATARD,CH375_STATUS
 	rte
 
-; Install the IRQ3 and system call handler and put a
-; dummy value in the CH375_STATUS byte.
+; Install the IRQ3, tick and system call handler
+; and put a dummy value in the CH375_STATUS byte.
 irq3_install::
 	move.l #irq3_handler,IRQ3_VECTOR
+	move.l #tick_handler,TICK_VECTOR
 	move.l #SYSCALL_HANDLER,TRAP11_VECTOR
 	move.b #$FF,CH375_STATUS
 	rts
@@ -103,7 +115,7 @@ consgetc::
 ; The system call trap handler.
 ; D1 holds the system call number.
 SYSCALL_HANDLER::
-	cmp.l   #20,D1		; Is it a valid syscall number?
+	cmp.l   #21,D1		; Is it a valid syscall number?
 	bhi.s	.EPILOGUE	; No, so return now
 
 	move.l	$1C(A7),-(A7)	; Copy three original argument
@@ -140,6 +152,7 @@ SYSCALL_HANDLER::
 	dc.l	sys_lseek	; 18 = lseek
 	dc.l	sys_time	; 19 = time
 	dc.l	sys_ioctl	; 20 = ioctl
+	dc.l	sys_stime	; 21 = stime
 
 .NULLSYS:
 	rts

@@ -5,7 +5,7 @@
  * or UNIX System Laboratories, Inc. and are reproduced herein with
  * the permission of UNIX System Laboratories, Inc.
  *
- *	$Id: time.h,v 1.2 1994/05/04 08:08:42 rgrimes Exp $
+ *	$Id: time.h,v 1.1 2024/09/22 05:47:24 wkt Exp wkt $
  */
 /*
  * Copyright (c) 1989 The Regents of the University of California.
@@ -92,6 +92,7 @@ struct tm *localtime __P((const time_t *));
 time_t mktime __P((struct tm *));
 size_t strftime __P((char *, size_t, const char *, const struct tm *));
 time_t time __P((time_t *));
+void stime __P((time_t));
 
 #ifndef _ANSI_SOURCE
 void tzset __P((void));

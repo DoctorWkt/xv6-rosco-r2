@@ -93,3 +93,8 @@ ioctl::
 	movem.l D1/A1,-(A7)		; Save two regs
 	move.l  #20,D1			; Syscall 20
 	jmp	do_syscall
+
+stime::
+	movem.l D1/A1,-(A7)		; Save two regs
+	move.l  #21,D1			; Syscall 21
+	jmp	do_syscall

@@ -26,6 +26,10 @@ struct buf*     bread(uint);
 void            brelse(struct buf*);
 void            bwrite(struct buf*);
 
+// clock.c
+long sys_time(long *tloc);
+void sys_stime(long time);
+
 // cprintf.c
 void            cprintf(char *fmt, ...);
 
