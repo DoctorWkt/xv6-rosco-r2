@@ -101,11 +101,17 @@ PUTC_WAIT:
 
 ; Read character from UART A
 consgetc::
+	clr.l	D0		; Clear all of D0
 .BUSYLOOP
 	btst.b  #0,DUART_SRA	; Loop until there is
 	beq.s   .BUSYLOOP	; a character.
 	move.b  DUART_RBA,D0	; Get it into D0
 
+    	cmpi.b	#13,D0		; Is it CR?
+	bne.s	L3		; No
+	move.b	#10,D0		; Yes, convert to LF (newline)
+
+L3:
 	cmp.b	#1,DUART_ECHO_A	; Should we echo it?
 	bne.s	.NOECHO		; No, skip
 	jsr	PUTC_WAIT	; Yes, echo it

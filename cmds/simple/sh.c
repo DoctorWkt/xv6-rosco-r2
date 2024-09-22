@@ -345,7 +345,6 @@ int main() {
   // Use readline() to get the input line if there is no pipeline command
   if (buf == NULL) {
     buf = readline("$ ");
-    cprintf("\n");
   }
 
   // Parse the input line, generating argv
