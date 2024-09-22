@@ -98,3 +98,8 @@ stime::
 	movem.l D1/A1,-(A7)		; Save two regs
 	move.l  #21,D1			; Syscall 21
 	jmp	do_syscall
+
+sleep::
+	movem.l D1/A1,-(A7)		; Save two regs
+	move.l  #22,D1			; Syscall 22
+	jmp	do_syscall

@@ -5,7 +5,7 @@
  * or UNIX System Laboratories, Inc. and are reproduced herein with
  * the permission of UNIX System Laboratories, Inc.
  *
- *	$Id: time.h,v 1.1 2024/09/22 05:47:24 wkt Exp wkt $
+ *	$Id: time.h,v 1.2 2024/09/22 06:57:37 wkt Exp $
  */
 /*
  * Copyright (c) 1989 The Regents of the University of California.

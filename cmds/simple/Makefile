@@ -10,7 +10,7 @@ LDLIBS= -lc -lgcc
 
 BINS= banner basename cal cat cksum cmp comm cp crc cut date echo \
 	expand fopen fred grep head less ln ls mkdir mv od pwd \
-	rm roff setdate sh tail usertests wc
+	rm roff setdate sleep sh tail usertests wc
 
 # Lose the implicit compilation rule
 %: %.c

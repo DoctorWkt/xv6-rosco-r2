@@ -4,8 +4,8 @@
 
 // Time of Day clock for xv6 - Warren Toomey
 
-char tick_cntr=0;	// 100Hz tick counter, updated by interrupt handler
-long epoch_time=0;	// Time since Jan 1, 1970
+char tick_cntr=0;		// 100Hz tick counter, updated by interrupt handler
+volatile long epoch_time=0;	// Time since Jan 1, 1970
 
 // Return the time to the user process
 long sys_time(long *tloc) {
@@ -19,10 +19,14 @@ void sys_stime(long time) {
   epoch_time= time;
 }
 
-void inc_tick(void) {
-  tick_cntr++;
-  if (tick_cntr==100) {
-    tick_cntr=0;
-    epoch_time++;
-  }
+// Sleep for N seconds
+int sys_sleep(unsigned int N) {
+  // Get the future time
+  long newtime= epoch_time + (long)N;
+
+  // Loop until the current time
+  // matches the future time
+  while (epoch_time < newtime)
+    ;
+  return(0);
 }

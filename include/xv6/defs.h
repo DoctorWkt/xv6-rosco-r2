@@ -29,6 +29,7 @@ void            bwrite(struct buf*);
 // clock.c
 long sys_time(long *tloc);
 void sys_stime(long time);
+int sys_sleep(unsigned int N);
 
 // cprintf.c
 void            cprintf(char *fmt, ...);
