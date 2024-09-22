@@ -20,4 +20,4 @@ s: s.elf
 	m68k-elf-objdump --disassemble -S $< > $@.dis
 
 clean:
-	rm -f *.o s *.elf *.dis
+	rm -f *.o s *.elf *.dis *.map
