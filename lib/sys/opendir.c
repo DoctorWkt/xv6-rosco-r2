@@ -63,3 +63,11 @@ void rewinddir(DIR *dirp)
 {
   lseek(dirp->dd_fd, 0, SEEK_SET);
 }
+
+long telldir(const DIR *dirp) {
+  return(lseek(dirp->dd_fd, 0, SEEK_CUR));
+}
+
+void seekdir(DIR *dirp, long loc) {
+  lseek(dirp->dd_fd, loc, SEEK_SET);
+}
