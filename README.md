@@ -101,6 +101,12 @@ Then, do a `make sdcard.img`. This creates the SD card image. The image has two
 partitions: the FAT partition has a bootable copy of the `xv6` kernel, and the
 second partition holds the `xv6` filesystem.
 
+## Status - 24 Sept 2024
+
+I've imported a bunch more commands, this time from FUZIX.
+I also got the kernel to return an `errno` value back to
+userland.
+
 ## Status - 19 Sept 2024
 
 I've imported more programs, replaced `malloc()` with the Minix version and

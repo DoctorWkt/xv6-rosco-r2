@@ -89,6 +89,7 @@ int             fetchint(uint, int*);
 int             fetchstr(uint, char**);
 
 // sysfile.c
+void		set_errno(int err);
 int		sys_dup(int fd);
 int		sys_read(int fd, char *p, int n);
 int		sys_write(int fd, char *p, int n);

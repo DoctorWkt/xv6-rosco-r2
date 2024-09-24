@@ -6,6 +6,7 @@
 ; result and A1 holds the errno value.
 do_syscall:
 	trap    #11			; Trap to the xv6 kernel
+    	movem.l A1,errno		; Update errno from the syscall
     	movem.l (A7)+,D1/A1		; Restore two regs
     	rts
 

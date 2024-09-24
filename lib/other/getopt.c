@@ -1,7 +1,7 @@
 /*
  * getopt - parse command-line options
  */
-/* $Header: getopt.c,v 1.1 89/12/18 14:39:31 eck Exp $ */
+/* $Header: /usr/local/src/xv6-rosco-r2/lib/other/RCS/getopt.c,v 1.1 2024/09/24 03:12:28 wkt Exp $ */
 
 #include	<stdlib.h>
 #include	<string.h>

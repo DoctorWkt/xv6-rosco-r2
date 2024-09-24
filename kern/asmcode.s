@@ -133,7 +133,8 @@ SYSCALL_HANDLER::
 	move.l  .SYSTABLE(PC,D1),A1
 	jsr     (A1)		; and jump to the function
 .EPILOGUE
-	add.l	#$C,A7		; Remove the copied arguments
+	add.l	#$C,A7		; Remove the copied arguments,
+	move.l  errno,A1	; copy errno into A1
 	rte			; and return to userland
 
 .SYSTABLE:

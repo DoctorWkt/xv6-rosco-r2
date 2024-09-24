@@ -5,6 +5,7 @@
 #include <xv6/defs.h>
 #include <xv6/param.h>
 #include <xv6/fcntl.h>
+#include <errno.h>
 
 #define MAX_RAM		(1024 * 1024)	// 1M of RAM
 #define START_ADDR	0x18000
@@ -26,19 +27,26 @@ static char **spawn_cptr;
 // Return if this fails.
 void sys_spawn(int argc, char *argv[]) {
 
+  // Set no errors yet
+  set_errno(0);
+
   // Save the argc off the stack
   spawn_argc= argc;
 
   // If there are no arguments, or too many, fail.
-  if (spawn_argc < 1 || spawn_argc > MAXARGS) return;
+  if (spawn_argc < 1 || spawn_argc > MAXARGS) {
+    set_errno(EFAULT); return;
+  }
 
   // Check that all the argv's are valid
   for (spawn_i=0; spawn_i < spawn_argc; spawn_i++)
-    if (argv[spawn_i]==NULL) return;
+    if (argv[spawn_i]==NULL) {
+      set_errno(EFAULT); return;
+    }
 
   // Try to open the program
   spawn_fd= sys_open(argv[0], O_RDONLY);
-  if (spawn_fd== -1) return;
+  if (spawn_fd== -1) { set_errno(ENOENT); return; }
 
   // Copy each argument on to the stack
   // and save the pointer value

@@ -12,9 +12,16 @@
 #include <xv6/file.h>
 #include <xv6/fcntl.h>
 #include <xv6/termios.h>
+#include <errno.h>
 
 extern void consputc(char ch);
 extern char consgetc(void);
+
+int errno;                      // The kernel location of errno
+
+void set_errno(int err) {       // and the code to set it
+  errno= err;
+}
 
 struct file *ofile[NOFILE];  // Open files
 
@@ -28,8 +35,9 @@ argfd(int fd, int *pfd, struct file **pf)
 {
   struct file *f;
 
-  if(fd < 0 || fd >= NOFILE || (f=ofile[fd]) == 0)
-    return -1;
+  if(fd < 0 || fd >= NOFILE || (f=ofile[fd]) == 0) {
+    set_errno(EBADF); return -1;
+  }
   if(pfd)
     *pfd = fd;
   if(pf)
@@ -50,6 +58,7 @@ fdalloc(struct file *f)
       return fd;
     }
   }
+  set_errno(EMFILE);
   return -1;
 }
 
@@ -58,6 +67,7 @@ sys_dup(int fd)
 {
   struct file *f;
 
+  set_errno(0);
   if(argfd(fd, 0, &f) < 0)
     return -1;
   if((fd=fdalloc(f)) < 0)
@@ -71,6 +81,7 @@ sys_read(int fd, char *p, int n)
 {
   struct file *f;
 
+  set_errno(0);
   if(argfd(fd, 0, &f) < 0 || n < 0 || p==0)
     return -1;
 
@@ -89,6 +100,7 @@ sys_write(int fd, char *p, int n)
   struct file *f;
   int i;
 
+  set_errno(0);
   if(argfd(fd, 0, &f) < 0 || n < 0 || p==0)
     return -1;
 
@@ -109,6 +121,7 @@ sys_close(int fd)
 {
   struct file *f;
 
+  set_errno(0);
   if(argfd(fd, 0, &f) < 0)
     return -1;
   ofile[fd] = 0;
@@ -121,6 +134,7 @@ sys_fstat(int fd, struct xvstat *st)
 {
   struct file *f;
 
+  set_errno(0);
   if(argfd(fd, 0, &f) < 0 || st==0)
     return -1;
 
@@ -139,12 +153,16 @@ sys_link(char *old, char *new)
   char name[DIRSIZ];
   struct inode *dp, *ip;
 
-  if(old==0 || new==0)
+  set_errno(0);
+  if(old==0 || new==0) {
+    set_errno(ENOENT);
     return -1;
+  }
 
   begin_op();
   if((ip = namei(old)) == 0){
     end_op();
+    set_errno(ENOENT);
     return -1;
   }
 
@@ -152,6 +170,7 @@ sys_link(char *old, char *new)
   if(ip->type == T_DIR){
     iunlockput(ip);
     end_op();
+    set_errno(EPERM);
     return -1;
   }
 
@@ -179,6 +198,7 @@ bad:
   iupdate(ip);
   iunlockput(ip);
   end_op();
+  set_errno(EEXIST);
   return -1;
 }
 
@@ -206,12 +226,16 @@ sys_unlink(char *path)
   char name[DIRSIZ];
   uint off;
 
-  if(path==0)
+  set_errno(0);
+  if(path==0) {
+    set_errno(ENOENT);
     return -1;
+  }
 
   begin_op();
   if((dp = nameiparent(path, name)) == 0){
     end_op();
+    set_errno(EPERM);
     return -1;
   }
 
@@ -252,6 +276,7 @@ sys_unlink(char *path)
 bad:
   iunlockput(dp);
   end_op();
+  set_errno(EPERM);
   return -1;
 }
 
@@ -307,8 +332,11 @@ sys_open(char *path, int omode)
   struct inode *ip= NULL;
   int type= FD_INODE;
 
-  if(path==0 || omode <0)
+  set_errno(0);
+  if(path==0 || omode <0) {
+    set_errno(ENOENT);
     return -1;
+  }
 
   begin_op();
 
@@ -321,6 +349,7 @@ sys_open(char *path, int omode)
       if(f)
         fileclose(f);
       end_op();
+      set_errno(EACCES);
       return -1;
     }
   } else {
@@ -329,17 +358,20 @@ sys_open(char *path, int omode)
       ip = create(path, T_FILE, 0, 0);
       if(ip == 0){
         end_op();
+        set_errno(EEXIST);
         return -1;
       }
     } else {
       if((ip = namei(path)) == 0){
         end_op();
+        set_errno(ENOENT);
         return -1;
       }
       ilock(ip);
       if(ip->type == T_DIR && omode != O_RDONLY){
         iunlockput(ip);
         end_op();
+	set_errno(EISDIR);
         return -1;
       }
     }
@@ -349,6 +381,7 @@ sys_open(char *path, int omode)
         fileclose(f);
       iunlockput(ip);
       end_op();
+      set_errno(EACCES);
       return -1;
     }
 
@@ -382,8 +415,10 @@ sys_mkdir(char *path)
   struct inode *ip;
 
   begin_op();
+  set_errno(0);
   if(path==0 || (ip = create(path, T_DIR, 0, 0)) == 0){
     end_op();
+    set_errno(EINVAL);
     return -1;
   }
   iunlockput(ip);
@@ -397,14 +432,17 @@ sys_chdir(char *path)
   struct inode *ip;
   
   begin_op();
+  set_errno(0);
   if(path==0 || (ip = namei(path)) == 0){
     end_op();
+    set_errno(EINVAL);
     return -1;
   }
   ilock(ip);
   if(ip->type != T_DIR){
     iunlockput(ip);
     end_op();
+    set_errno(ENOTDIR);
     return -1;
   }
   iunlock(ip);
@@ -420,8 +458,10 @@ int sys_lseek(int fd, int offset, int base) {
   int zerosize;
   struct file *f;
 
-  if (argfd(fd, 0, &f) < 0 || base<0)
-    return -1;
+  set_errno(0);
+  if (argfd(fd, 0, &f) < 0 || base<0) {
+    set_errno(EINVAL); return -1;
+  }
 
   if (base == SEEK_SET)
     newoff = offset;
@@ -433,6 +473,7 @@ int sys_lseek(int fd, int offset, int base) {
     newoff = f->ip->size + offset;
 
   if (newoff < 0) {
+    set_errno(EINVAL);
     return -1;
   }
   
@@ -461,10 +502,13 @@ int sys_ioctl (int fd, unsigned long op, void *arg) {
   struct file *f;
   struct termios *t;
 
-  if (argfd(fd, 0, &f) < 0)
-    return -1;
+  set_errno(0);
+  if (argfd(fd, 0, &f) < 0) {
+    set_errno(EINVAL); return -1;
+  }
 
   if (f->type != FD_CONSOLE) {
+    set_errno(ENOTTY);
     return -1;
   }
 
@@ -489,6 +533,7 @@ int sys_ioctl (int fd, unsigned long op, void *arg) {
 	DUART_ECHO_A= 0;
       return(0);
   }
+  set_errno(EINVAL);
   return(-1);
 }
 
