@@ -8,7 +8,7 @@ CFLAGS+= -nostdinc -nostdlib
 CFLAGS+= -L $(GCCLIBDIR) -L $(LIBDIR)
 LDLIBS= -lc -lgcc
 
-BINS= banner basename cal cat cksum cmp comm cp crc cut date dd dirname \
+BINS= banner basename cal cat cksum cmp comm cp crc cut date dd du dirname \
       echo ed expand fgrep fopen fred grep hd head less ln ls mkdir more mv \
       od pwd rev rm rmdir roff sed setdate sh sleep sort split strings tail \
       tar tee tr uniq usertests wc foo
