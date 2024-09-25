@@ -196,6 +196,7 @@ ialloc(short type)
     if(dip->type == 0){  // a free inode
       memset(dip, 0, sizeof(*dip));
       dip->type = type;
+      dip->mtime = (int)sys_time(NULL);
       log_write(bp);   // mark it allocated on the disk
       brelse(bp);
       return iget(inum);
@@ -222,6 +223,7 @@ iupdate(struct inode *ip)
   dip->major = ip->major;
   dip->minor = ip->minor;
   dip->nlink = ip->nlink;
+  dip->mtime = ip->mtime;
   dip->size = ip->size;
   memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
   log_write(bp);
@@ -286,6 +288,7 @@ ilock(struct inode *ip)
     ip->major = dip->major;
     ip->minor = dip->minor;
     ip->nlink = dip->nlink;
+    ip->mtime = dip->mtime;
     ip->size = dip->size;
     memmove(ip->addrs, dip->addrs, sizeof(ip->addrs));
     brelse(bp);
@@ -419,6 +422,7 @@ stati(struct inode *ip, struct xvstat *st)
   st->ino = ip->inum;
   st->type = ip->type;
   st->nlink = ip->nlink;
+  st->mtime = ip->mtime;
   st->size = ip->size;
 }
 
@@ -469,6 +473,7 @@ writei(struct inode *ip, char *src, uint off, uint n)
 
   if(n > 0 && off > ip->size){
     ip->size = off;
+    ip->mtime= (int)sys_time(NULL);
     iupdate(ip);
   }
   return n;
