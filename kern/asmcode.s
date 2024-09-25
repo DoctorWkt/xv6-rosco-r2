@@ -121,7 +121,7 @@ L3:
 ; The system call trap handler.
 ; D1 holds the system call number.
 SYSCALL_HANDLER::
-	cmp.l   #22,D1		; Is it a valid syscall number?
+	cmp.l   #23,D1		; Is it a valid syscall number?
 	bhi.s	.EPILOGUE	; No, so return now
 
 	move.l	$1C(A7),-(A7)	; Copy three original argument
@@ -161,6 +161,7 @@ SYSCALL_HANDLER::
 	dc.l	sys_ioctl	; 20 = ioctl
 	dc.l	sys_stime	; 21 = stime
 	dc.l	sys_sleep	; 22 = sleep
+	dc.l	sys_fchdir	; 23 = fchdir
 
 .NULLSYS:
 	rts

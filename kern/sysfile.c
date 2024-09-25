@@ -426,18 +426,8 @@ sys_mkdir(char *path)
   return 0;
 }
 
-int
-sys_chdir(char *path)
+static int ichdir(struct inode *ip)
 {
-  struct inode *ip;
-  
-  begin_op();
-  set_errno(0);
-  if(path==0 || (ip = namei(path)) == 0){
-    end_op();
-    set_errno(EINVAL);
-    return -1;
-  }
   ilock(ip);
   if(ip->type != T_DIR){
     iunlockput(ip);
@@ -450,6 +440,31 @@ sys_chdir(char *path)
   end_op();
   cwd = ip;
   return 0;
+}
+
+int
+sys_chdir(char *path)
+{
+  struct inode *ip;
+  
+  begin_op();
+  set_errno(0);
+  if(path==0 || (ip = namei(path)) == 0){
+    end_op();
+    set_errno(EINVAL);
+    return -1;
+  }
+  return(ichdir(ip));
+}
+
+int sys_fchdir(int fd) {
+  struct file *f;
+
+  set_errno(0);
+  if (argfd(fd, 0, &f) < 0) {
+    set_errno(EBADF); return(-1);
+  }
+  return(ichdir(f->ip));
 }
 
 // lseek code derived from https://github.com/ctdk/xv6
@@ -535,13 +550,4 @@ int sys_ioctl (int fd, unsigned long op, void *arg) {
   }
   set_errno(EINVAL);
   return(-1);
-}
-
-// For now, intialise the filesystem data structures
-void sys_init() {
-  blkinit();	   // Underlying block device
-  binit();         // Buffer cache
-  fileinit();      // File table
-  iinit();
-  initlog();
 }

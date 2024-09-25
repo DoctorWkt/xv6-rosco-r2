@@ -5,7 +5,7 @@
 #include <errno.h>
 #include <xv6/types.h>
 #include <xv6/stat.h>
-// extern int errno;
+#include <xv6/defs.h>
 
 // Perform an xv6 fstat and fill in the fields that xv6 doesn't have
 int fstat(int fd, struct stat *statbuf) {

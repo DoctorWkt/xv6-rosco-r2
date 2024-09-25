@@ -104,3 +104,8 @@ sleep::
 	movem.l D1/A1,-(A7)		; Save two regs
 	move.l  #22,D1			; Syscall 22
 	jmp	do_syscall
+
+fchdir::
+	movem.l D1/A1,-(A7)		; Save two regs
+	move.l  #23,D1			; Syscall 23
+	jmp	do_syscall

@@ -21,7 +21,13 @@ static char *argv[]= { "/bin/sh" };
 void kmain()
 {
   cprintf("Welcome to xv6\n");
-  sys_init();
+
+  // Initialise several data structures
+  blkinit();       // Underlying block device
+  binit();         // Buffer cache
+  fileinit();      // File table
+  iinit();	   // Read the superblock
+  initlog();	   // Block logging
 
   // Open stdin, stdout, stderr
   sys_open("/tty", O_RDONLY);

@@ -10,12 +10,6 @@ struct sleeplock;
 struct xvstat;
 struct superblock;
 
-
-// XXX
-void panic(char *);
-void sys_spawn(int argc, char *argv[]);
-void sys_exit();
-
 // blk.c
 void blkinit(void);
 void blkrw(struct buf *b);
@@ -33,6 +27,7 @@ int sys_sleep(unsigned int N);
 
 // cprintf.c
 void            cprintf(char *fmt, ...);
+void		panic(char *);
 
 // file.c
 struct file*    filealloc(void);
@@ -70,6 +65,10 @@ void            log_write(struct buf*);
 void            begin_op();
 void            end_op();
 
+// spawn.c
+void		sys_spawn(int argc, char *argv[]);
+void		sys_exit();
+
 // string.c
 #ifndef USE_NATIVE_STRINGS
 int             memcmp(const void*, const void*, uint);
@@ -100,7 +99,7 @@ int		sys_unlink(char *path);
 int		sys_open(char *path, int omode);
 int		sys_mkdir(char *path);
 int		sys_chdir(char *path);
-void		sys_init(void);			// For now!
+int		sys_fchdir(int fd);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
