@@ -44,7 +44,7 @@ void wsect(uint, void *);
 void winode(uint, struct dinode *);
 void rinode(uint inum, struct dinode *ip);
 void rsect(uint sec, void *buf);
-uint ialloc(ushort type);
+uint ialloc(ushort type, int mtime);
 void iappend(uint inum, void *p, int n);
 void dappend(int dirino, char *name, int fileino);
 void add_directory(int dirino, char *localdir);
@@ -155,7 +155,7 @@ int main(int argc, char *argv[]) {
   wsect(1, buf);
 
   // Grab an i-node for the root directory
-  rootino = ialloc(T_DIR);	// Epoch mtime for now
+  rootino = ialloc(T_DIR, 0);	// Epoch mtime for now
   assert(rootino == ROOTINO);
 
   // Set up the directory entry for . and add it to the root dir
@@ -230,7 +230,7 @@ void rsect(uint sec, void *buf) {
 }
 
 // Allocate an i-node
-uint ialloc(ushort type) {
+uint ialloc(ushort type, int mtime) {
   uint inum = freeinode++;
   struct dinode din;
 
@@ -239,6 +239,7 @@ uint ialloc(ushort type) {
   din.type = xshort(type);
   din.nlink = xshort(1);
   din.size = xint(0);
+  din.mtime = xint(mtime);
   winode(inum, &din);
   return inum;
 }
@@ -330,7 +331,7 @@ void fappend(int dirino, char *filename, struct stat *sb) {
     exit(1);
   }
   // Allocate an i-node for the file
-  inum = ialloc(T_FILE);
+  inum = ialloc(T_FILE, sb->st_mtime);
 
   // Add the file's name to the root directory
   dappend(dirino, filename, inum);
@@ -391,7 +392,7 @@ int makdir(int dirino, char *newdir, struct stat *sb) {
 
   // Allocate the inode number for this directory
   // and set up the . and .. entries
-  ino = ialloc(T_DIR);
+  ino = ialloc(T_DIR, sb->st_mtime);
   dappend(ino, ".", ino);
   dappend(ino, "..", dirino);
 

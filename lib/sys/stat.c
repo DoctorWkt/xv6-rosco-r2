@@ -11,11 +11,11 @@
 int fstat(int fd, struct stat *statbuf) {
   struct xvstat xvbuf;
   if (statbuf==NULL) {
-    // errno= EFAULT;
+    errno= EFAULT;
     return(-1);
   }
   if (sys_fstat(fd, &xvbuf)==-1) {
-    // errno= EFAULT;
+    errno= EFAULT;
     return(-1);
   }
 
@@ -30,7 +30,8 @@ int fstat(int fd, struct stat *statbuf) {
     default:    statbuf->st_mode |= S_IFREG;
   }
   statbuf->st_uid = statbuf->st_gid = 0;
-  statbuf->st_atime = statbuf->st_mtime = statbuf->st_ctime = 0;
+  statbuf->st_mtime = xvbuf.mtime;
+  statbuf->st_atime = statbuf->st_ctime = 0;
   return(0);
 }
 
@@ -41,8 +42,8 @@ int stat(const char *path, struct stat *buf)
   errno=0;
   fd= open(path, O_RDONLY);
   if (fd==-1) {
-    // errno= ENOENT;
-  return(-1);
+    errno= ENOENT;
+    return(-1);
   }
   err= fstat(fd, buf);
   close(fd);
