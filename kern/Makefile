@@ -5,8 +5,8 @@ LDFLAGS+= -T $(TOP_SRCDIR)/misc/hugerom_rosco_m68k_program.ld
 CFLAGS+= -g
 
 # Set the block device to either to SD card or the CH375 USB interface
-#BLKDEVICE = sdblk.o
-BLKDEVICE = usbblk.o
+BLKDEVICE = sdblk.o
+#BLKDEVICE = usbblk.o
 
 INIT_O = init.o
 
