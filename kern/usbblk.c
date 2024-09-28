@@ -8,7 +8,6 @@
 
 // These are in the asmcode.s file
 extern void cpu_delay(int ms);
-extern void stop_timer(void);
 extern void irq3_install();
 extern void send_ch375_cmd(unsigned char cmd);
 extern void send_ch375_data(unsigned char cmd);
@@ -53,9 +52,6 @@ void blkinit(void) {
   
   // Say hello before we start
   cprintf("About to initialise the CH375\n");
-
-  // Stop the timer
-  stop_timer();
 
   // Install the IRQ3 handler
   // and the syscall handler

@@ -1,7 +1,7 @@
 ; CH375 I/O addresses
-CHDATARD  equ	$FF0001
-CHDATAWR  equ	$FF0001
-CHCMDWR   equ	$FF0003
+CHDATARD  equ	$FFF001
+CHDATAWR  equ	$FFF001
+CHCMDWR   equ	$FFF003
 
 ; UART I/O addresses
 DUART_SRA equ   $F00003
@@ -31,10 +31,9 @@ L1:	subq.l #1,D0
 	bne.s  L1
 	rts
 
-; Stop the 100Hz heartbeat
-;
-stop_timer::
-    move.b  #$00,DUART_IMR
+; Start the 100Hz heartbeat
+start_timer::
+    move.b  #$08,DUART_IMR	; Unmask counter interrupt
     rts
 
 ; Increment the tick counter
@@ -59,13 +58,16 @@ irq3_handler::
 	move.b CHDATARD,CH375_STATUS
 	rte
 
-; Install the IRQ3, tick and system call handler
-; and put a dummy value in the CH375_STATUS byte.
+; Install the IRQ3, tick and system call handler,
+; put a dummy value in the CH375_STATUS byte,
+; start the heartbeat and enable interrupts.
 irq3_install::
 	move.l #irq3_handler,IRQ3_VECTOR
 	move.l #tick_handler,TICK_VECTOR
 	move.l #SYSCALL_HANDLER,TRAP11_VECTOR
 	move.b #$FF,CH375_STATUS
+	jsr    start_timer
+	and.w  #$F0FF,SR		; Enable all interrupts
 	rts
 
 ; Write the given command to the CH375.
