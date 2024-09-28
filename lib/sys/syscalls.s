@@ -109,3 +109,8 @@ fchdir::
 	movem.l D1/A1,-(A7)		; Save two regs
 	move.l  #23,D1			; Syscall 23
 	jmp	do_syscall
+
+utime::
+	movem.l D1/A1,-(A7)		; Save two regs
+	move.l  #24,D1			; Syscall 24
+	jmp	do_syscall

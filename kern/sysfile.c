@@ -13,6 +13,7 @@
 #include <xv6/fcntl.h>
 #include <xv6/termios.h>
 #include <errno.h>
+#include <utime.h>
 
 extern void consputc(char ch);
 extern char consgetc(void);
@@ -550,4 +551,30 @@ int sys_ioctl (int fd, unsigned long op, void *arg) {
   }
   set_errno(EINVAL);
   return(-1);
+}
+
+int sys_utime(const char *path, const struct utimbuf *timbuf) {
+  struct inode *ip= NULL;
+
+  set_errno(0);
+  if (path==NULL || timbuf==NULL) {
+    set_errno(EACCES);
+    return(-1);
+  }
+
+  begin_op();
+
+  if ((ip = namei((char *)path)) == NULL) {
+    end_op();
+    set_errno(ENOENT);
+    return(-1);
+  }
+
+  ilock(ip);
+  ip->mtime= timbuf->modtime;
+  iupdate(ip);
+  iunlock(ip);
+
+  end_op();
+  return(0);
 }
