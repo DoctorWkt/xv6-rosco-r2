@@ -8,6 +8,7 @@ DUART_SRA equ   $F00003
 DUART_RBA equ   $F00007
 DUART_TBA equ   $F00007
 DUART_IMR equ	$F0000A
+R_STOPCNTCMD equ $F0001F
 
 ; Address of the IRQ3 and
 ; TRAP11 vectors
@@ -38,12 +39,15 @@ stop_timer::
 
 ; Increment the tick counter
 tick_handler::
+    move.l D0,-(A7)		; Save D0
     addq.b #1,tick_cntr		; Increment the tick counter
     cmpi.b #100,tick_cntr	; Is it 100?
     bne.s  L2			; No, skip
     clr.b tick_cntr		; Set the tick counter to zero
     addq.l #1,epoch_time	; and increment the epoch time
 L2:
+    move.b R_STOPCNTCMD,D0	; Clear the interrupt
+    move.l (A7)+,D0		; Restore D0
     rte
 
 ; This is the interrupt handler for the CH375.
