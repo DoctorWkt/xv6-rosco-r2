@@ -1,0 +1,68 @@
+GAL22V10
+CH375LOGIC
+
+; Pins 1 - 12
+CLK A12 A13 A14 A15 A16 A17  A18  A19  VMA   IOSEL GND
+INT RW  LDS AS  S0  S1  IRQ3 WR   CHCS DTACK VPA   VCC
+; Pins 13 - 24
+
+; Read enable (active low) is RW inverted
+;
+WR= /RW
+
+; CH375 chip select (active low): IOSEL, AS and LDS low,
+; A12..A19 high which means addresses 0xFFF000 to 0xFFFFFF,
+; a valid address on the address bus and data on D0..D8.
+;
+/CHCS= /IOSEL * /AS * /LDS * A19 * A18 * A17 * A16 * A15 * A14 * A13 * A12
+
+; When CHCS is low, DTACK is low. Otherwise it is high-Z.
+;
+DTACK.T= GND
+DTACK.E= /CHCS
+
+; We go through three S1/S0 states with these transitions:
+; 0/0: INT is high. When INT goes low we move to ...
+; 0/1: INT is now low. When VMA goes low we move to ...
+; 1/1: INT is still low. When INT goes high we move back to ...
+; 0/0
+;
+; The trick is to consider what the register values S0
+; and S1 were before the rising clock edge, but consider
+; what the signal values are at the rising clock edge.
+
+; S0 can be high when
+; a) we are in 0/0 and INT is low
+; b) we are in 0/1 (thus, remain in 0/1)
+; c) we are in 1/1 and INT is low
+;
+S0 =   /S0 * /S1 * /INT
+     +  S0 * /S1
+     +  S0 *  S1 * /INT
+
+; S1 can be high when
+; a) we are in 0/1 and VMA is low
+; b) we are in 1/1 and INT is low
+;
+S1 =   S0 * /VMA
+     + S0 * S1 * /INT
+
+; IRQ3 is active low in state 0/1,
+; high for 0/0, 1/1, 1/0 (doesn't exist)
+;
+IRQ3 = /S1 * /S0   +   S1
+
+; VPA is active low in state 0/1,
+; high-Z at all other times
+;
+VPA.T = GND
+VPA.E = /S1 * S0
+
+DESCRIPTION
+
+rosco_m68k Classic CH375 logic for:
+ - address decoding
+ - read/write cycle handling
+ - interrupt handling
+
+Copyright (c) 2024 Warren Toomey, GPL3

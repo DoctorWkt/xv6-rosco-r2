@@ -19,14 +19,21 @@ system at the moment. You will have to figure some things out yourself.
 
 ## Hardware Options
 
-As at mid-Sept '24, I'm finding the bit-bang SD card very slow. I also really don't
-want to have to put in a relocating loader into the kernel. So I plan on designing
-an expansion board with 1M of RAM and a
+I'm finding the bit-bang SD card very slow. I also really don't want to have to put
+in a relocating loader into the kernel. So I have designed an
+[expansion board](hardware) with 1M of RAM and a
 [CH375](https://www.electrodragon.com/product/ch375-module-reading-and-writing-u-diskusb-communicate/)
-USB interface. There will be a
+USB interface. It has a
 [base register](https://en.wikipedia.org/wiki/Base_and_bounds) in front of the RAM, so that I can have multiple processes, but each one will think that they start at the same base address.
 
-## Running the System
+There will be two Git branches for this project:
+
+ - `main` has the code that supports the SD card. In this version, there is only
+   one program running at any time.
+ - `ch375` has the code that supports the above expansion board. In this version,
+   the system can have multiple processes running at any time.
+
+## Running the SD Version
 
 You will find a Zip file at the top-level, `sd-img.zip`. Unzip this to extract
 the `sdcard.img` file: this is an SD card image. Write this, block for block, onto

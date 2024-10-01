@@ -1,0 +1,25 @@
+GAL22V10
+RAMDECODE
+
+; Pins 1 - 12
+CLK A12 A13 A14 A15   A16   A17     A18 A19 IOSEL EXPSEL GND
+RW  UDS LDS AS  ORAM1 ERAM1 BASESEL NC  NC  NC    NC     VCC
+; Pins 13 - 24
+
+; Base Register write enable (active low): IOSEL, RW, AS and LDS low,
+; A12 low, A13..A19 high which means addresses 0xFFE000 to 0xFFEFFF,
+; a valid address on the address bus and data being output on D0..D8.
+;
+/BASESEL= /IOSEL * /RW * /AS * /LDS * A19 * A18 * A17 * A16 * A15 * A14 * A13 * /A12
+
+; The odd  address RAM is selected when both EXPSEL and LDS are low.
+; The even address RAM is selected when both EXPSEL and UDS are low.
+/ORAM1= /EXPSEL * /LDS
+/ERAM1= /EXPSEL * /UDS
+
+DESCRIPTION
+
+rosco_m68k Classic RAM decode logic for
+address decoding.
+
+Copyright (c) 2024 Warren Toomey, GPL3
