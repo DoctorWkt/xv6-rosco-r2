@@ -15,7 +15,7 @@ components:
 In this directory you can find the [KiCad board design](kicad), the
 [code](pld) for the two GALs on the board, a PDF of the
 [schematic](schematic.pdf), a mock-up [image](ch375_board.jpg)
-of the board and some [docs](documentation) of the CH375 device.
+of the board and some [documentation](docs) on the CH375 device.
 
 ## The CH375 Device
 
