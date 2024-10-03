@@ -11,7 +11,7 @@ typedef unsigned int uint32_t;
 
 // This are in the asmcode.s file
 extern void stop_timer(void);
-extern void irq3_install();
+extern void irq5_install();
 
 typedef enum {
     SD_CARD_TYPE_V1,
@@ -54,9 +54,9 @@ void blkinit(void) {
   // Stop the timer
   // stop_timer();
 
-  // Install the IRQ3 handler
+  // Install the IRQ5 handler
   // and the syscall handler
-  irq3_install();
+  irq5_install();
 
   // Initialise the SD card
   if (SD_initialize(&SD) != SD_INIT_OK)

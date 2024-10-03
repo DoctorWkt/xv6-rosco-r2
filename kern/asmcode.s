@@ -10,9 +10,9 @@ DUART_TBA equ   $F00007
 DUART_IMR equ	$F0000A
 R_STOPCNTCMD equ $F0001F
 
-; Address of the IRQ3 and
+; Address of the IRQ5 and
 ; TRAP11 vectors
-IRQ3_VECTOR   equ $6C
+IRQ5_VECTOR   equ $74
 TRAP11_VECTOR equ $AC
 TICK_VECTOR   equ $114
 
@@ -53,16 +53,16 @@ L2:
 ; Send a CMD_GET_STATUS to the device,
 ; read a byte of data and save it in the
 ; CH375_STATUS location.
-irq3_handler::
+irq5_handler::
 	move.b #CMD_GET_STATUS,CHCMDWR
 	move.b CHDATARD,CH375_STATUS
 	rte
 
-; Install the IRQ3, tick and system call handler,
+; Install the IRQ5, tick and system call handler,
 ; put a dummy value in the CH375_STATUS byte,
 ; start the heartbeat and enable interrupts.
-irq3_install::
-	move.l #irq3_handler,IRQ3_VECTOR
+irq5_install::
+	move.l #irq5_handler,IRQ5_VECTOR
 	move.l #tick_handler,TICK_VECTOR
 	move.l #SYSCALL_HANDLER,TRAP11_VECTOR
 	move.b #$FF,CH375_STATUS

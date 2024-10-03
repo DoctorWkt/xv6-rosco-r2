@@ -8,7 +8,7 @@
 
 // These are in the asmcode.s file
 extern void cpu_delay(int ms);
-extern void irq3_install();
+extern void irq5_install();
 extern void send_ch375_cmd(unsigned char cmd);
 extern void send_ch375_data(unsigned char cmd);
 extern unsigned char read_ch375_data(void);
@@ -53,9 +53,9 @@ void blkinit(void) {
   // Say hello before we start
   cprintf("About to initialise the CH375\n");
 
-  // Install the IRQ3 handler
+  // Install the IRQ5 handler
   // and the syscall handler
-  irq3_install();
+  irq5_install();
 
   // Send the reset command and wait 50mS
   send_ch375_cmd(CMD_RESET_ALL);
