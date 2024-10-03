@@ -30,9 +30,9 @@ CH375 does these things:
 
  - It sets the CH375 chip select low for addresses $00FFF001 (data) and
    $00FFF003 (commands), and lowers DTACK at the same time.
- - When the CH375 sends an interrupt, it drops the 68000 IRQ3 and VPA lines 
-   low until the 68000 drops the VMA line. Then both IRQ3 and VPA go back to
-    being high-Z.
+ - After the CH375 sends an interrupt, the CPU responds with various lines
+   to acknowledge the interrupt. The GAL determines when to drop VPA to
+   let the CPU know that the interrupt has been acknowledged.
 
 ## The Expansion RAM and the Base Register
 
@@ -63,4 +63,3 @@ In terms of hardware, the register itself is a 74HCT161 4-bit register, and the
 This is connected to a 74HCT283 4-bit adder. The base register's value is added
 to address lines A16...A19 to form the physical address that is then sent to the
 two RAM chips.
-
