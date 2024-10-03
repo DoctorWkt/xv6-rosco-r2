@@ -7,8 +7,8 @@
 #include <xv6/fcntl.h>
 #include <errno.h>
 
-#define MAX_RAM		(1024 * 1024)	// 1M of RAM
-#define START_ADDR	0x18000
+#define START_ADDR	0x00100000
+#define MAX_RAM		(START_ADDR + 1024 * 1024)	// 1M of RAM
 
 // We use variables that are not on the stack
 // to ensure that they are not tromped when
@@ -106,7 +106,7 @@ void sys_spawn(int argc, char *argv[]) {
   // and jump to the first instruction in the program
   __asm__ (
 	"    move.l %[temp],%%sp\n"
-	"    jmp 0x18000\n"
+	"    jmp 0x100000\n"			// XXX Same as START_ADDR
 	: [temp] "+d"(spawn_lowptr));
 }
 
