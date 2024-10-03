@@ -6,6 +6,8 @@
 #include <xv6/param.h>
 #include <xv6/fcntl.h>
 #include <errno.h>
+#include <unistd.h>
+#include <a.out.h>
 
 #define START_ADDR	0x00100000
 #define MAX_RAM		(START_ADDR + 1024 * 1024)	// 1M of RAM
@@ -27,6 +29,8 @@ static char **spawn_cptr;
 // Return if this fails.
 void sys_spawn(int argc, char *argv[]) {
 
+  struct aout ahdr;		// a.out header
+
   // Set no errors yet
   set_errno(0);
 
@@ -47,6 +51,16 @@ void sys_spawn(int argc, char *argv[]) {
   // Try to open the program
   spawn_fd= sys_open(argv[0], O_RDONLY);
   if (spawn_fd== -1) { set_errno(ENOENT); return; }
+
+  // Ensure the file has an a.out header
+  spawn_cnt= sys_read(spawn_fd, (char *)&ahdr, sizeof(struct aout));
+  if (spawn_cnt!= sizeof(struct aout)) {
+    set_errno(EINVAL); return;
+  }
+
+  if (ahdr.a_magic != AOUT_MAGIC) {
+    set_errno(EINVAL); return;
+  }
 
   // Copy each argument on to the stack
   // and save the pointer value
@@ -95,6 +109,7 @@ void sys_spawn(int argc, char *argv[]) {
   // Do this after we set up the arguments
   // in case we might tromp on them.
   spawn_ptr= (char *)START_ADDR;
+  sys_lseek(spawn_fd, 0, SEEK_SET);
   while (1) {
     spawn_cnt= sys_read(spawn_fd, spawn_ptr, 512);
     if (spawn_cnt<=0) break;
