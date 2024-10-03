@@ -108,6 +108,12 @@ Then, do a `make sdcard.img`. This creates the SD card image. The image has two
 partitions: the FAT partition has a bootable copy of the `xv6` kernel, and the
 second partition holds the `xv6` filesystem.
 
+## Status - 1 Oct 2024
+
+I've imported the KiCad design for my expansion RAM + base register + CH375 board
+and done a bit of documentation on it. I've ordered PCBs and I'm waiting for them
+to arrive so I can test if the board works.
+
 ## Status - 24 Sept 2024
 
 I've imported a bunch more commands, this time from FUZIX.
