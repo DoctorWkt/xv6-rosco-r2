@@ -4,7 +4,8 @@ LDFLAGS= --oformat=elf32-m68k  -z max-page-size=16 -z common-page-size=1
 LDFLAGS+= -T $(TOP_SRCDIR)/misc/hugerom_rosco_m68k_program.ld
 CFLAGS+= -g
 
-BLKDEVICE = sdblk.o
+#BLKDEVICE = sdblk.o
+BLKDEVICE = usbblk.o
 
 INIT_O = init.o
 
