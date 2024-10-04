@@ -12,6 +12,7 @@
 #include <xv6/types.h>
 #include <xv6/defs.h>
 #include <xv6/param.h>
+#include <xv6/spinlock.h>
 #include <xv6/stat.h>
 #include <xv6/fs.h>
 #include <xv6/buf.h>
@@ -161,12 +162,14 @@ bfree(uint b)
 // read or write that inode's ip->valid, ip->size, ip->type, &c.
 
 struct {
+  struct spinlock lock;
   struct inode inode[NINODE];
 } icache;
 
 void
 iinit(void)
 {
+  initlock(&icache.lock, "icache");
   readsb(&sb);
   cprintf("xv6 superblock: size %d nblocks %d ninodes %d\n",
 		sb.size, sb.nblocks, sb.ninodes);
@@ -238,11 +241,14 @@ iget(uint inum)
 {
   struct inode *ip, *empty;
 
+  acquire(&icache.lock);
+
   // Is the inode already cached?
   empty = 0;
   for(ip = &icache.inode[0]; ip < &icache.inode[NINODE]; ip++){
     if(ip->ref > 0 && ip->inum == inum){
       ip->ref++;
+      release(&icache.lock);
       return ip;
     }
     if(empty == 0 && ip->ref == 0)    // Remember empty slot.
@@ -257,6 +263,7 @@ iget(uint inum)
   ip->inum = inum;
   ip->ref = 1;
   ip->valid = 0;
+  release(&icache.lock);
 
   return ip;
 }
@@ -266,7 +273,9 @@ iget(uint inum)
 struct inode*
 idup(struct inode *ip)
 {
+  acquire(&icache.lock);
   ip->ref++;
+  release(&icache.lock);
   return ip;
 }
 
@@ -316,10 +325,12 @@ iunlock(struct inode *ip)
 void
 iput(struct inode *ip)
 {
+  acquire(&icache.lock);
   if(ip->valid && ip->nlink == 0){
     int r = ip->ref;
     if(r == 1){
       // inode has no links and no other references: truncate and free.
+      release(&icache.lock);
       itrunc(ip);
       ip->type = 0;
       iupdate(ip);
@@ -328,6 +339,7 @@ iput(struct inode *ip)
   }
 
   ip->ref--;
+  release(&icache.lock);
 }
 
 // Common idiom: unlock, then put.
