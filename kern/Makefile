@@ -4,15 +4,13 @@ LDFLAGS= --oformat=elf32-m68k  -z max-page-size=16 -z common-page-size=1
 LDFLAGS+= -T $(TOP_SRCDIR)/misc/hugerom_rosco_m68k_program.ld
 CFLAGS+= -g
 
-# Set the block device to either to SD card or the CH375 USB interface
-#BLKDEVICE = sdblk.o
-BLKDEVICE = usbblk.o
+BLKDEVICE = sdblk.o
 
 INIT_O = init.o
 
 OBJS =  $(BLKDEVICE) bio.o clock.o cprintf.o file.o fs.o kinit.o \
 	log.o main.o spawn.o string.o sysfile.o asmcode.o \
-	sdcard_asm.o
+	spinlock.o sdcard_asm.o
 
 all: xv6.bin
 

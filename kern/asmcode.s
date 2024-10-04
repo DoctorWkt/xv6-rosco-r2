@@ -124,6 +124,25 @@ L3:
 .NOECHO
 	rts
 
+; Given the address of a lock as the first
+; argument on the stack, loop until the lock is set
+setlock::
+	move.l 4(A7),A0
+.lockloop
+	tas (A0)
+	bne .lockloop
+	rts
+
+; Disable all interrupts
+cli::
+	or.w	#$0700,SR
+	rts
+
+; Enable all interrupts
+sti::
+	and.w	#$F0FF,SR
+	rts
+
 ; The system call trap handler.
 ; D1 holds the system call number.
 SYSCALL_HANDLER::

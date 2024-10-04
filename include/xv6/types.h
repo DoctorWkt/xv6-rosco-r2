@@ -1,6 +1,7 @@
+typedef unsigned char  uchar;
 typedef unsigned short ushort;
 typedef unsigned int   uint;
-typedef unsigned char  uchar;
+typedef unsigned long  ulong;
 
 // I need to change the kernel code
 // to use these

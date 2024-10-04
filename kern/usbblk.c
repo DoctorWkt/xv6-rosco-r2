@@ -6,14 +6,6 @@
 #include <xv6/fs.h>
 #include <xv6/buf.h>
 
-// These are in the asmcode.s file
-extern void cpu_delay(int ms);
-extern void irq5_install();
-extern void send_ch375_cmd(unsigned char cmd);
-extern void send_ch375_data(unsigned char cmd);
-extern unsigned char read_ch375_data(void);
-extern unsigned char get_ch375_status(void);
-
 // CH375 commands
 #define CMD_RESET_ALL    	0x05
 #define CMD_SET_USB_MODE 	0x15

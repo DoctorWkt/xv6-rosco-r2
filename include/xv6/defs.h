@@ -10,6 +10,17 @@ struct sleeplock;
 struct xvstat;
 struct superblock;
 
+// asmcode.s
+void cpu_delay(int ms);
+void irq5_install();
+void send_ch375_cmd(unsigned char cmd);
+void send_ch375_data(unsigned char cmd);
+unsigned char read_ch375_data(void);
+unsigned char get_ch375_status(void);
+void setlock(void *lockptr);
+void cli();
+void sti();
+
 // blk.c
 void blkinit(void);
 void blkrw(struct buf *b);
@@ -69,6 +80,15 @@ void            end_op();
 void		sys_spawn(int argc, char *argv[]);
 void		sys_exit();
 
+// spinlock.c
+void            acquire(struct spinlock*);
+void            getcallerpcs(void*, uint*);
+int             holding(struct spinlock*);
+void            initlock(struct spinlock*, char*);
+void            release(struct spinlock*);
+void            pushcli(void);
+void            popcli(void);
+
 // string.c
 #ifndef USE_NATIVE_STRINGS
 int             memcmp(const void*, const void*, uint);
@@ -100,6 +120,7 @@ int		sys_open(char *path, int omode);
 int		sys_mkdir(char *path);
 int		sys_chdir(char *path);
 int		sys_fchdir(int fd);
+int		sys_lseek(int fd, int offset, int base);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
