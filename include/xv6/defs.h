@@ -76,6 +76,9 @@ void            log_write(struct buf*);
 void            begin_op();
 void            end_op();
 
+// proc.c
+void		pinit(void);
+
 // spawn.c
 void		sys_spawn(int argc, char *argv[]);
 void		sys_exit();

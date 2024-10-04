@@ -1,7 +1,6 @@
 #include <xv6/types.h>
 #include <xv6/defs.h>
 #include <xv6/param.h>
-#include <xv6/spinlock.h>
 #include <xv6/fs.h>
 #include <xv6/buf.h>
 
@@ -38,7 +37,6 @@ struct logheader {
 };
 
 struct log {
-  struct spinlock lock;
   int start;
   int size;
   int outstanding; // how many FS sys calls are executing.
@@ -68,7 +66,6 @@ initlog(void)
     panic("initlog: too big logheader");
 
   struct superblock sb;
-  initlock(&log.lock, "log");
   readsb(&sb);
   log.start = sb.logstart;
   log.size = sb.nlog;
@@ -135,14 +132,12 @@ recover_from_log(void)
 void
 begin_op(void)
 {
-  acquire(&log.lock);
   while(1){
     if(log.committing){
     } else if(log.lh.n + (log.outstanding+1)*MAXOPBLOCKS > LOGSIZE){
       // this op might exhaust log space; wait for commit.
     } else {
       log.outstanding += 1;
-      release(&log.lock);
       break;
     }
   }
@@ -155,7 +150,6 @@ end_op(void)
 {
   int do_commit = 0;
 
-  acquire(&log.lock);
   log.outstanding -= 1;
   if(log.committing)
     panic("log.committing");
@@ -167,15 +161,12 @@ end_op(void)
     // and decrementing log.outstanding has decreased
     // the amount of reserved space.
   }
-  release(&log.lock);
 
   if(do_commit){
     // call commit w/o holding locks, since not allowed
     // to sleep with locks.
     commit();
-    acquire(&log.lock);
     log.committing = 0;
-    release(&log.lock);
   }
 }
 
@@ -228,7 +219,6 @@ log_write(struct buf *b)
   if (log.outstanding < 1)
     panic("log_write outside of trans");
 
-  acquire(&log.lock);
   for (i = 0; i < log.lh.n; i++) {
     if (log.lh.block[i] == b->blockno)   // log absorbtion
       break;
@@ -237,6 +227,5 @@ log_write(struct buf *b)
   if (i == log.lh.n)
     log.lh.n++;
   b->flags |= B_DIRTY; // prevent eviction
-  release(&log.lock);
 }
 

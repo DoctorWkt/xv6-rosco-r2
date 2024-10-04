@@ -21,12 +21,10 @@
 #include <xv6/types.h>
 #include <xv6/defs.h>
 #include <xv6/param.h>
-#include <xv6/spinlock.h>
 #include <xv6/fs.h>
 #include <xv6/buf.h>
 
 struct {
-  struct spinlock lock;
   struct buf buf[NBUF];
 
   // Linked list of all buffers, through prev/next.
@@ -38,8 +36,6 @@ void
 binit(void)
 {
   struct buf *b;
-
-  initlock(&bcache.lock, "bcache");
 
   // Create linked list of buffers
   bcache.head.prev = &bcache.head;
@@ -60,13 +56,10 @@ bget(uint blockno)
 {
   struct buf *b;
 
-  acquire(&bcache.lock);
-
   // Is the block already cached?
   for(b = bcache.head.next; b != &bcache.head; b = b->next){
     if(b->blockno == blockno){
       b->refcnt++;
-      release(&bcache.lock);
       return b;
     }
   }
@@ -79,7 +72,6 @@ bget(uint blockno)
       b->blockno = blockno;
       b->flags = 0;
       b->refcnt = 1;
-      release(&bcache.lock);
       return b;
     }
   }
@@ -113,7 +105,6 @@ bwrite(struct buf *b)
 void
 brelse(struct buf *b)
 {
-  acquire(&bcache.lock);
   b->refcnt--;
   if (b->refcnt == 0) {
     // no one is waiting for it.
@@ -124,5 +115,4 @@ brelse(struct buf *b)
     bcache.head.next->prev = b;
     bcache.head.next = b;
   }
-  release(&bcache.lock);
 }
