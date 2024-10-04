@@ -3,7 +3,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <xv6/types.h>
-#include <xv6/defs.h>
 #include <xv6/param.h>
 
 // Miscellaneous functions
