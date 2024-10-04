@@ -11,7 +11,7 @@ INIT_O = init.o
 
 OBJS =  $(BLKDEVICE) bio.o clock.o cprintf.o file.o fs.o kinit.o \
 	log.o main.o spawn.o string.o sysfile.o asmcode.o \
-	proc.o sdcard_asm.o
+	proc.o frames.o sdcard_asm.o
 
 all: xv6.bin
 

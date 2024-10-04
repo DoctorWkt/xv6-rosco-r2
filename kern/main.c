@@ -29,6 +29,7 @@ void kmain()
   iinit();	   // Read the superblock
   initlog();	   // Block logging
   pinit();	   // Process table
+  finit();	   // Free frame list
 
   // Open stdin, stdout, stderr
   sys_open("/tty", O_RDONLY);

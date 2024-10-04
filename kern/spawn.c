@@ -6,10 +6,8 @@
 #include <xv6/param.h>
 #include <xv6/fcntl.h>
 #include <errno.h>
-#include <unistd.h>
 #include <a.out.h>
 
-#define START_ADDR	0x00100000
 #define MAX_RAM		(START_ADDR + 1024 * 1024)	// 1M of RAM
 
 // We use variables that are not on the stack
@@ -109,7 +107,7 @@ void sys_spawn(int argc, char *argv[]) {
   // Do this after we set up the arguments
   // in case we might tromp on them.
   spawn_ptr= (char *)START_ADDR;
-  sys_lseek(spawn_fd, 0, SEEK_SET);
+  sys_lseek(spawn_fd, 0, 0);
   while (1) {
     spawn_cnt= sys_read(spawn_fd, spawn_ptr, 512);
     if (spawn_cnt<=0) break;

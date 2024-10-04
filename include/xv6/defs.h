@@ -49,6 +49,11 @@ int             fileread(struct file*, char*, int n);
 int             filestat(struct file*, struct xvstat*);
 int             filewrite(struct file*, char*, int n);
 
+// frames.c
+void		finit(void);
+void		freeframes(int pid);
+int		allocframes(int pid, int nframes);
+
 // fs.c
 void		itrunc(struct inode *ip);
 void            readsb(struct superblock *sb);
@@ -78,20 +83,16 @@ void            end_op();
 
 // proc.c
 void		pinit(void);
-struct proc *	myproc();
+void		userinit(void);
+struct proc *	myproc(void);
+void		sched(void);
+void		sleep(void *chan, struct spinlock *lk);
+void		wakeup(void *chan);
+int		kill(int pid);
 
 // spawn.c
 void		sys_spawn(int argc, char *argv[]);
 void		sys_exit();
-
-// spinlock.c
-void            acquire(struct spinlock*);
-void            getcallerpcs(void*, uint*);
-int             holding(struct spinlock*);
-void            initlock(struct spinlock*, char*);
-void            release(struct spinlock*);
-void            pushcli(void);
-void            popcli(void);
 
 // string.c
 #ifndef USE_NATIVE_STRINGS

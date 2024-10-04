@@ -8,6 +8,7 @@ _start::                          ; entrypoint
     jmp      _start2		  ; uint16_t: magic number $600C
     dc.w     $0000		  ; uint16_t: padding
     dc.l     _code_end		  ; uint32_t: end of machine code
+    dc.l     _data_end		  ; uint32_t: end of initialised data
     dc.l     _bss_end		  ; uint32_t: end of BSS
     dc.l     $10000		  ; uint32_t: total size of process in bytes
 _start2:
