@@ -8,9 +8,9 @@ CFLAGS+= -nostdinc -nostdlib
 CFLAGS+= -L $(GCCLIBDIR) -L $(LIBDIR)
 LDLIBS= -lc -lgcc
 
-BINS= banner basename cal cat cksum cmp comm cp crc cut date dd du dirname \
-      echo ed expand fgrep fopen fred grep hd head less ln ls mkdir more mv \
-      od pwd rev rm rmdir roff sed setdate sh sleep sort split tail \
+BINS= banner basename cal cat chmem cksum cmp comm cp crc cut date dd du \
+      dirname echo ed expand fgrep fopen fred grep hd head less ln ls mkdir \
+      more mv od pwd rev rm rmdir roff sed setdate sh sleep sort split tail \
       tar tee touch tr uniq usertests wc foo
 
 # Lose the implicit compilation rule
