@@ -35,6 +35,10 @@ void kmain()
   sys_open("/tty", O_WRONLY);
   sys_open("/tty", O_WRONLY);
 
+  // Eventually this will initialise the first program.
+  // For now, it sets up the working directory.
+  userinit();
+
   // Start the first program
   sys_spawn(1, argv);
   while (1) ;

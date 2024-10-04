@@ -78,6 +78,7 @@ void            end_op();
 
 // proc.c
 void		pinit(void);
+struct proc *	myproc();
 
 // spawn.c
 void		sys_spawn(int argc, char *argv[]);

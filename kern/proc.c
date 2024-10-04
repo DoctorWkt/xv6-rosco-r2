@@ -13,6 +13,9 @@ static struct proc *curproc;           // The process running or NULL
 int nextpid = 1;
 
 void pinit(void) {
+  struct proc *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    p->state = UNUSED;
   curproc=NULL;
 }
 
@@ -34,6 +37,7 @@ found:
   p->pid = nextpid++;
 
   // XXX More to do here
+  return(p);
 }
 
 // Set up first user process.
@@ -46,6 +50,15 @@ void userinit(void) {
   // XXX More to do here
   p->cwd = namei("/");
   p->state = RUNNABLE;
+}
+
+// Return a pointer to the current process entry
+struct proc *myproc() {
+  struct proc *p = curproc;
+
+  if(p== 0)
+    panic("myproc");
+  return(p);
 }
 
 void sched(void) { }

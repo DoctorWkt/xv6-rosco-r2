@@ -16,12 +16,11 @@
 #include <xv6/fs.h>
 #include <xv6/buf.h>
 #include <xv6/file.h>
+#include <xv6/proc.h>
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 struct superblock sb; 
 
-// The program's current directory
-struct inode *cwd;           // Current directory
 
 // Read the super block.
 void
@@ -172,9 +171,6 @@ iinit(void)
 		sb.size, sb.nblocks, sb.ninodes);
   cprintf("  nlog %d logstart %d inodestart %d bmap start %d\n",
 		sb.nlog, sb.logstart, sb.inodestart, sb.bmapstart);
-
-  // XXX: this belongs elsewhere
-  cwd = namei("/");
 }
 
 static struct inode* iget(uint inum);
@@ -593,12 +589,15 @@ skipelem(char *path, char *name)
 static struct inode*
 namex(char *path, int nameiparent, char *name)
 {
+  struct proc *p;		// Current process
   struct inode *ip, *next;
 
   if(*path == '/')
     ip = iget(ROOTINO);
-  else
-    ip = idup(cwd);
+  else {
+    p= myproc();
+    ip = idup(p->cwd);
+  }
 
   while((path = skipelem(path, name)) != 0){
     ilock(ip);

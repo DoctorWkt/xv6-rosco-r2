@@ -10,6 +10,7 @@
 #include <xv6/stat.h>
 #include <xv6/fs.h>
 #include <xv6/file.h>
+#include <xv6/proc.h>
 #include <xv6/fcntl.h>
 #include <xv6/termios.h>
 #include <errno.h>
@@ -429,6 +430,8 @@ sys_mkdir(char *path)
 
 static int ichdir(struct inode *ip)
 {
+  struct proc *p;               // Current process
+  p= myproc();
   ilock(ip);
   if(ip->type != T_DIR){
     iunlockput(ip);
@@ -437,9 +440,9 @@ static int ichdir(struct inode *ip)
     return -1;
   }
   iunlock(ip);
-  iput(cwd);
+  iput(p->cwd);
   end_op();
-  cwd = ip;
+  p->cwd = ip;
   return 0;
 }
 
