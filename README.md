@@ -26,12 +26,13 @@ in a relocating loader into the kernel. So I have designed an
 USB interface. It has a
 [base register](https://en.wikipedia.org/wiki/Base_and_bounds) in front of the RAM, so that I can have multiple processes, but each one will think that they start at the same base address.
 
-There will be two Git branches for this project:
+There are two Git branches for this project:
 
  - `main` has the code that supports the SD card. In this version, there is only
    one program running at any time.
  - `ch375` has the code that supports the above expansion board. In this version,
-   the system can have multiple processes running at any time.
+   the system will have multiple processes running at any time. As at early Oct 2024
+   this is a work in progress.
 
 ## Running the SD Version
 
@@ -107,6 +108,12 @@ Yes, there are a heap of warnings. Over time, I will try to fix them.
 Then, do a `make sdcard.img`. This creates the SD card image. The image has two
 partitions: the FAT partition has a bootable copy of the `xv6` kernel, and the
 second partition holds the `xv6` filesystem.
+
+## Status - 5 Oct 2024
+
+I have started the work in the `ch375` branch to add processes to the system.
+There is still only one process, but I've brought back the `proc` structure
+and I've begun the work to write the memory management code.
 
 ## Status - 1 Oct 2024
 
