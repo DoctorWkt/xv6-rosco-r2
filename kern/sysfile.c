@@ -25,8 +25,6 @@ void set_errno(int err) {       // and the code to set it
   errno= err;
 }
 
-struct file *ofile[NOFILE];  // Open files
-
 #define SBUFSIZE 512
 char seekbuf[SBUFSIZE];         // Buffer to do lseek()
 
@@ -37,7 +35,7 @@ argfd(int fd, int *pfd, struct file **pf)
 {
   struct file *f;
 
-  if(fd < 0 || fd >= NOFILE || (f=ofile[fd]) == 0) {
+  if(fd < 0 || fd >= NOFILE || (f=proc->ofile[fd]) == 0) {
     set_errno(EBADF); return -1;
   }
   if(pfd)
@@ -55,8 +53,8 @@ fdalloc(struct file *f)
   int fd;
 
   for(fd = 0; fd < NOFILE; fd++){
-    if(ofile[fd] == 0){
-      ofile[fd] = f;
+    if(proc->ofile[fd] == 0){
+      proc->ofile[fd] = f;
       return fd;
     }
   }
@@ -126,7 +124,7 @@ sys_close(int fd)
   set_errno(0);
   if(argfd(fd, 0, &f) < 0)
     return -1;
-  ofile[fd] = 0;
+  proc->ofile[fd] = 0;
   fileclose(f);
   return 0;
 }
