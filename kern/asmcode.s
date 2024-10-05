@@ -3,6 +3,9 @@ CHDATARD  equ	$FFF001
 CHDATAWR  equ	$FFF001
 CHCMDWR   equ	$FFF003
 
+; CH375 Commands
+CMD_GET_STATUS  equ  $22
+
 ; UART I/O addresses
 DUART_SRA equ   $F00003
 DUART_RBA equ   $F00007
@@ -10,14 +13,14 @@ DUART_TBA equ   $F00007
 DUART_IMR equ	$F0000A
 R_STOPCNTCMD equ $F0001F
 
-; Address of the IRQ5 and
-; TRAP11 vectors
+; Address of the IRQ5
+; and TRAP11 vectors
 IRQ5_VECTOR   equ $74
 TRAP11_VECTOR equ $AC
 TICK_VECTOR   equ $114
 
-; CH375 Commands
-CMD_GET_STATUS  equ  $22
+; Address of the base register
+BASE_REG      equ $FFE001
 
 	section .text
 
@@ -122,6 +125,11 @@ L3:
 	bne.s	.NOECHO		; No, skip
 	jsr	PUTC_WAIT	; Yes, echo it
 .NOECHO
+	rts
+
+; Set the base register to the byte argument
+setbasereg::
+	move.b 7(A7),BASE_REG
 	rts
 
 ; Given the address of a lock as the first

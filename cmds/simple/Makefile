@@ -23,7 +23,12 @@ BINS= banner basename cal cat chmem cksum cmp comm cp crc cut date dd du \
 	m68k-elf-objcopy -O binary $< $@
 	m68k-elf-objdump --disassemble -S $< > $@.dis
 
+# Some programs need more memory than 64K
 all: $(BINS)
+	../../tools/chmem 128 ls
+	../../tools/chmem 128 cal
+	../../tools/chmem 256 sed
+	../../tools/chmem 1024 setdate
 	cp $(BINS) ../../build/bin
 
 clean:

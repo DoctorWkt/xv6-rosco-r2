@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
   cursize= ahdr.a_bss_end - 0x100000;
   if (size < cursize) {
     fprintf(stderr, "%s: needs at least %d bytes, not %d bytes\n",
-		cursize, size); exit(1);
+		argv[2], cursize, size); exit(1);
   }
 
   // Set the header to have the new size

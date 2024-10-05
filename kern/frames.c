@@ -63,7 +63,6 @@ int allocframes(int pid, int nframes) {
       }
 
     // No frames available, so restore the list and fail
-cprintf("Failed to allocate 1 frame to pid %d\n", pid);
     for (i=0; i<NFRAME; i++) flist[i]= blist[i];
     return(-1);
   }
@@ -74,7 +73,7 @@ cprintf("Failed to allocate 1 frame to pid %d\n", pid);
   maxstart= potstart= -1;
   maxnum=0;
   for (i=0; i<NFRAME; i++) {
-    // Free frame
+    // This is a free frame
     if (flist[i]== FREE) {
       // If this is the start of a run, record it
       if (potstart == -1) {
@@ -82,32 +81,39 @@ cprintf("Failed to allocate 1 frame to pid %d\n", pid);
       }
 
       // Otherwise increment the run size
-      potnum++; continue;
-    } else {
-      // If we were recording a potential run,
-      // we have hit the end of the run
-      if (potstart != -1) {
-	// Overwrite the biggest run if this is better
-	if (potnum > maxnum) {
-	  maxstart= potstart;
-	  maxnum= potnum;
-	}
-	// Mark no more current run
-	potstart= -1;
+      potnum++;
+
+      // Loop back unless this is the last frame.
+      // Otherwise fall down into the code to see
+      // if this is the biggest run.
+      if (i < NFRAME-1) continue;
+    }
+
+    // The frame isn't free, or we have
+    // hit the end of the list.
+
+    // If we were recording a potential run,
+    // we have hit the end of the run
+    if (potstart != -1) {
+      // Overwrite the biggest run if this is better
+      if (potnum > maxnum) {
+	maxstart= potstart;
+	maxnum= potnum;
       }
+
+      // Mark no more current run
+      potstart= -1;
     }
   }
 
   // If there are enough frames in the
   // maximum run, then allocate from this
-  if (nframes >= maxnum) {
+  if (maxnum >= nframes) {
     for (i=0; i < nframes; i++) flist[i+maxstart]= pid;
-cprintf("Allocating %d frames starting at %d to pid %d\n", maxnum, maxstart, pid);
     return(maxstart);
   }
 
   // Not enough frames available, so restore the list and fail
-cprintf("Failed to allocate %d frames to pid %d\n", nframes, pid);
   for (i=0; i<NFRAME; i++) flist[i]= blist[i];
   return(-1);
 }

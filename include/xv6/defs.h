@@ -18,6 +18,7 @@ void send_ch375_data(unsigned char cmd);
 unsigned char read_ch375_data(void);
 unsigned char get_ch375_status(void);
 void setlock(void *lockptr);
+void setbasereg(int val);
 void cli();
 void sti();
 

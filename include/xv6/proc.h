@@ -5,6 +5,7 @@ struct proc {
   enum procstate state;        // Process state
   int pid;                     // Process ID
   struct proc *parent;         // Parent process
+  int basereg;		       // Base register
   void *chan;                  // If non-zero, sleeping on chan
   int killed;                  // If non-zero, have been killed
   int exitstatus;              // Exit value, suitable for wait()

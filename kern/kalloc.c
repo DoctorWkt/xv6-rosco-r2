@@ -10,8 +10,14 @@ extern uint32_t _data_start, _data_end, _code_end, _bss_start, _bss_end;
 static void *curbrk= (void *)&_bss_end;
 static void *bssend= (void *)&_bss_end;
 
+// Set the current brk value.
+// Ensure that it is word-aligned.
 int kbrk(const void *addr) {
   void *cursp;
+
+  // Round up the address in case it is
+  // not aligned on a word boundary
+  if ((int)addr & 0x1) addr++;
 
   // Get the current stack pointer
   __asm__ __volatile__(
