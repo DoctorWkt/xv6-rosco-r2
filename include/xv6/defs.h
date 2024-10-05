@@ -40,6 +40,10 @@ int sys_sleep(unsigned int N);
 void            cprintf(char *fmt, ...);
 void		panic(char *);
 
+// exec.c
+void		sys_exec(char *pathname, char *argv[]);
+void		sys_exit();
+
 // file.c
 struct file*    filealloc(void);
 void            fileclose(struct file*);
@@ -93,10 +97,6 @@ void		sched(void);
 void		sleep(void *chan, struct spinlock *lk);
 void		wakeup(void *chan);
 int		kill(int pid);
-
-// spawn.c
-void		sys_exec(char *pathname, char *argv[]);
-void		sys_exit();
 
 // string.c
 #ifndef USE_NATIVE_STRINGS
