@@ -175,6 +175,9 @@ void sys_exit()
   for (int i=0; i<NOFILE; i++)
     sys_close(i);
 
+  // Free the program's memory
+  freeframes(proc->pid);
+
   // Reopen stdin, stdout, stderr
   sys_open("/tty", O_RDONLY);
   sys_open("/tty", O_WRONLY);
