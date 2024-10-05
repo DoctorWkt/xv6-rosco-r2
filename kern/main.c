@@ -41,6 +41,6 @@ void kmain()
   userinit();
 
   // Start the first program
-  sys_spawn(1, argv);
+  sys_exec(1, argv);
   while (1) ;
 }

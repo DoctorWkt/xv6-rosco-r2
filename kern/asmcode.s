@@ -179,7 +179,7 @@ SYSCALL_HANDLER::
 	dc.l	sys_fstat	; 13 = fstat
 	dc.l	sys_dup		; 14 = dup
 	dc.l	sys_mkdir	; 15 = mkdir
-	dc.l	sys_spawn	; 16 = spawn
+	dc.l	sys_exec	; 16 = exec
 	dc.l	consgetc	; 17 = consgetc, temporarily
 	dc.l	sys_lseek	; 18 = lseek
 	dc.l	sys_time	; 19 = time

@@ -75,6 +75,10 @@ void            stati(struct inode*, struct xvstat*);
 int             writei(struct inode*, char*, uint, uint);
 extern struct inode *cwd;
 
+// kalloc.c
+int		kbrk(const void *addr);
+void *		ksbrk(int increment);
+
 // log.c
 void            initlog(void);
 void            log_write(struct buf*);
@@ -91,7 +95,7 @@ void		wakeup(void *chan);
 int		kill(int pid);
 
 // spawn.c
-void		sys_spawn(int argc, char *argv[]);
+void		sys_exec(char *pathname, char *argv[]);
 void		sys_exit();
 
 // string.c

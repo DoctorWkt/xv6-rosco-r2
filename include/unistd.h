@@ -172,8 +172,6 @@ void	 usleep __P((u_int));
 void	*valloc __P((size_t));			/* obsoleted by malloc() */
 int	 vfork __P((void));
 
-void spawn(int argc, char *argv[]);
-
 #endif /* !_POSIX_SOURCE */
 __END_DECLS
 

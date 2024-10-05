@@ -70,7 +70,7 @@ mkdir::
 	move.l  #15,D1			; Syscall 15
 	jmp	do_syscall
 
-spawn::
+exec::
 	movem.l D1/A1,-(A7)		; Save two regs
 	move.l  #16,D1			; Syscall 16
 	jmp	do_syscall

@@ -351,7 +351,7 @@ int main() {
   argc = parse(buf, argv);
 
   // See if the first argument is cd. If so, do the chdir and
-  // then exit() which will respawn the shell!
+  // then exit() which will re-exec the shell!
   if (!strcmp(argv[0], "cd")) {
     if (argc == 2) {
       if (chdir(argv[1]) == -1)
@@ -400,7 +400,7 @@ int main() {
     cprintf("sh argv[%d] %s 0x%x\n", i, argv[i], argv[i]);
 #endif
 
-  // Now spawn the new program
-  spawn(realargc, argv);
-  exit(0);			// Restart ourselves if the spawn() failed
+  // Now exec the new program
+  exec(argv[0], argv);
+  exit(0);			// Restart ourselves if the exec() failed
 }
