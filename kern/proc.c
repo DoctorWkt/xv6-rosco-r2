@@ -1,14 +1,14 @@
 #include <xv6/types.h>
 #include <xv6/defs.h>
 #include <xv6/param.h>
+#define PROC_C 1
 #include <xv6/proc.h>
 
 struct {
   struct proc proc[NPROC];
 } ptable;
 
-static struct proc *initproc;
-static struct proc *curproc;           // The process running or NULL
+static struct proc *initproc;	// The init process
 
 int nextpid = 1;
 
@@ -16,7 +16,7 @@ void pinit(void) {
   struct proc *p;
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     p->state = UNUSED;
-  curproc=NULL;
+  proc=NULL;
 }
 
 // Look in the process table for an UNUSED proc.
@@ -45,20 +45,11 @@ void userinit(void) {
   struct proc *p;
   
   p = allocproc();
-  curproc= initproc = p;
+  proc= initproc = p;
 
   // XXX More to do here
   p->cwd = namei("/");
   p->state = RUNNABLE;
-}
-
-// Return a pointer to the current process entry
-struct proc *myproc() {
-  struct proc *p = curproc;
-
-  if(p== 0)
-    panic("myproc");
-  return(p);
 }
 
 void sched(void) { }
@@ -67,21 +58,19 @@ void sched(void) { }
 void
 sleep(void *chan, struct spinlock *lk)
 {
-  struct proc *p = curproc;
-
-  if(p== 0)
+  if(proc== NULL)
     panic("sleep");
 
   if(lk == 0)
     panic("sleep without lk");
 
   // Go to sleep.
-  p->chan = chan;
-  p->state = SLEEPING;
+  proc->chan = chan;
+  proc->state = SLEEPING;
   sched();
 
   // Tidy up.
-  p->chan = 0;
+  proc->chan = 0;
 }
 
 // Wake up all processes sleeping on chan.

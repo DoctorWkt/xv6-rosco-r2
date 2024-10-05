@@ -589,14 +589,12 @@ skipelem(char *path, char *name)
 static struct inode*
 namex(char *path, int nameiparent, char *name)
 {
-  struct proc *p;		// Current process
   struct inode *ip, *next;
 
   if(*path == '/')
     ip = iget(ROOTINO);
   else {
-    p= myproc();
-    ip = idup(p->cwd);
+    ip = idup(proc->cwd);
   }
 
   while((path = skipelem(path, name)) != 0){

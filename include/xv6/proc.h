@@ -19,3 +19,9 @@ struct proc {
 //   expandable heap
 //   unused space
 //   varying-sized stack
+
+#ifdef PROC_C
+struct proc *proc;		// Currently running process
+#else
+extern struct proc *proc;
+#endif

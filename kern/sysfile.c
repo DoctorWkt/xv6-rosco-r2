@@ -430,8 +430,6 @@ sys_mkdir(char *path)
 
 static int ichdir(struct inode *ip)
 {
-  struct proc *p;               // Current process
-  p= myproc();
   ilock(ip);
   if(ip->type != T_DIR){
     iunlockput(ip);
@@ -440,9 +438,9 @@ static int ichdir(struct inode *ip)
     return -1;
   }
   iunlock(ip);
-  iput(p->cwd);
+  iput(proc->cwd);
   end_op();
-  p->cwd = ip;
+  proc->cwd = ip;
   return 0;
 }
 
