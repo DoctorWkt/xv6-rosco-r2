@@ -28,7 +28,7 @@ all: $(BINS)
 	../../tools/chmem 128 ls
 	../../tools/chmem 128 cal
 	../../tools/chmem 256 sed
-	../../tools/chmem 1024 setdate
+	../../tools/chmem 128 setdate
 	cp $(BINS) ../../build/bin
 
 clean:

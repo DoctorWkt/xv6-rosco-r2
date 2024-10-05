@@ -9,6 +9,7 @@ CFLAGS+= -L $(GCCLIBDIR) -L $(LIBDIR)
 LDLIBS= -lc -lgcc
 
 all: s
+	../../tools/chmem 256 s
 	cp s ../../build/bin/vi
 
 s.elf:	s.o address.o adjust.o Bman.o buffer.o commands.o \
