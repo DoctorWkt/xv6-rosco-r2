@@ -4,8 +4,6 @@
  * University of California by American Telephone and Telegraph Co.
  * or UNIX System Laboratories, Inc. and are reproduced herein with
  * the permission of UNIX System Laboratories, Inc.
- *
- *	$Id: setjmp.h,v 1.1 2024/08/29 01:01:15 wkt Exp wkt $
  */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.

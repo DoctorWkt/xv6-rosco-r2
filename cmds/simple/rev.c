@@ -37,11 +37,6 @@ char copyright[] =
  All rights reserved.\n";
 #endif /* not lint */
 
-#ifndef lint
-/*static char sccsid[] = "from: @(#)rev.c	5.2 (Berkeley) 3/21/92";*/
-static char rcsid[] = "$Id: rev.c,v 1.2 1994/04/17 09:36:50 alm Exp $";
-#endif /* not lint */
-
 #include <sys/types.h>
 #include <errno.h>
 #include <stdio.h>

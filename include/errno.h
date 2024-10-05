@@ -31,7 +31,6 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)errno.h	7.13 (Berkeley) 2/19/91
- *	$Id: errno.h,v 1.1 2024/09/24 03:27:44 wkt Exp wkt $
  */
 
 #ifndef KERNEL
