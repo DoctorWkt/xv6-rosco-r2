@@ -178,7 +178,7 @@ SYSCALL_HANDLER::
 .SYSTABLE:
 	dc.l	consputc	;  0 = consputc, temporarily
 	dc.l	sys_exit	;  1 = exit
-	dc.l	.NULLSYS	;  2 = fork
+	dc.l	sys_brk		;  2 = brk
 	dc.l	sys_read	;  3 = read
 	dc.l	sys_write	;  4 = write
 	dc.l	sys_open	;  5 = open
@@ -187,7 +187,7 @@ SYSCALL_HANDLER::
 	dc.l	.NULLSYS	;  8 = creat
 	dc.l	sys_link	;  9 = link
 	dc.l	sys_unlink	; 10 = unlink
-	dc.l	.NULLSYS	; 11 = exec
+	dc.l	sys_sbrk	; 11 = sys_sbrk
 	dc.l	sys_chdir	; 12 = chdir
 	dc.l	sys_fstat	; 13 = fstat
 	dc.l	sys_dup		; 14 = dup

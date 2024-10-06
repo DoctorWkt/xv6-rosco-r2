@@ -75,6 +75,8 @@ void sys_exec(char *pathname, char *argv[]) {
   }
   proc->basereg= basereg;
   proc->nframes= nframes;
+  proc->curbrk= ahdr.a_bss_end;
+  proc->bssend= ahdr.a_bss_end;
 
   // We copy the arguments down to kernel memory,
   // then copy them again to the new program's

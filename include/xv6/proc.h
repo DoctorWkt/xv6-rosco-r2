@@ -7,6 +7,8 @@ struct proc {
   struct proc *parent;         // Parent process
   int basereg;		       // Base register
   int nframes;		       // Number of frames used
+  uint curbrk;	               // Current brk value
+  uint bssend;	               // Original end of the bss
   void *savedSP;	       // Saved stack pointer
   void *chan;                  // If non-zero, sleeping on chan
   int killed;                  // If non-zero, have been killed

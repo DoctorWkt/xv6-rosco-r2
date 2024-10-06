@@ -240,6 +240,47 @@ int sys_wait(int *statusptr)
   }
 }
 
+// Given a pointer to a proc table
+// which is proc's new child, copy
+// the memory from proc to the child.
+// This is ugly code!
+// 
+// We keep a copy of np and the current
+// stack pointer off the stack.
+
+static struct proc *copynp;
+static void *copysp;
+
+void copyaddrspace(struct proc *np) {
+  // Get np off the stack
+  copynp= np;
+
+  // Save this process' stack pointer
+  __asm__ __volatile__(
+        "    move.l %%sp,%0\n"
+        : "=r" (copysp));
+
+  // Move to the kernel stack so we can
+  // change the base register
+  __asm__ ("    move.l #0x100000,%sp");
+
+  // Set the base register to zero so that
+  // we can see all the expansion RAM
+  setbasereg(0);
+
+  // Copy the parent's text, data and bss
+
+  // Copy the parent's stack
+
+  // Restore the base register of the parent
+  setbasereg(proc->basereg);
+
+  // Restore the stack pointer
+  __asm__ (
+        "    move.l %[temp],%%sp\n"
+        : [temp] "+d"(copysp));
+}
+
 // Create a new process copying proc as the parent.
 // Returns -1 if failure, 0 if child, pid if parent.
 int sys_fork() {
@@ -273,9 +314,8 @@ int sys_fork() {
       np->ofile[i] = filedup(proc->ofile[i]);
   np->cwd = idup(proc->cwd);
 
-  // Copy the parent's text, data and bss
-
-  // Copy the parent's stack
+  // Copy the parent's memory to the child
+  copyaddrspace(np);
 
   // Mark the process as runnable
   np->state = RUNNABLE;
@@ -283,4 +323,37 @@ int sys_fork() {
   // Return the pid, or 0 if the child XXX TO DO!!
   pid = np->pid;
   return(pid);
+}
+
+int sys_brk(const void *addr) {
+  uint cursp;
+
+  // Get the current stack pointer
+  __asm__ __volatile__(
+        "    move.l %%sp,%0\n"
+        : "=r" (cursp));
+
+  // If the desired address is below bssend
+  // or too close to the stack, return -1
+  if ((uint)addr < proc->bssend || (uint)addr > (cursp-256)) {
+    set_errno(ENOMEM);
+    return(-1);
+  }
+
+  // Otherwise update the curbrk
+  proc->curbrk= (uint)addr; return(0);
+}
+
+void *sys_sbrk(int increment) {
+
+  // Keep the old brk value,
+  // work out the desired brk value
+  uint prevbrk= proc->curbrk;
+  uint newbrk= proc->curbrk + increment;
+
+  // See if that works or not
+  if (sys_brk((void *)newbrk)== -1) {
+    return( (void *) -1 );
+  } else
+    return((void *)prevbrk);
 }

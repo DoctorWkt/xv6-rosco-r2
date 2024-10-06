@@ -20,6 +20,11 @@ _exit::
 	move.l  #1,D1			; Syscall 1
 	jmp	do_syscall
 
+brk::
+	movem.l D1/A1,-(A7)		; Save two regs
+	move.l  #2,D1			; Syscall 2
+	jmp	do_syscall
+
 read::
 	movem.l D1/A1,-(A7)		; Save two regs
 	move.l  #3,D1			; Syscall 3
@@ -53,6 +58,11 @@ link::
 unlink::
 	movem.l D1/A1,-(A7)		; Save two regs
 	move.l  #10,D1			; Syscall 10
+	jmp	do_syscall
+
+sbrk::
+	movem.l D1/A1,-(A7)		; Save two regs
+	move.l  #11,D1			; Syscall 11
 	jmp	do_syscall
 
 chdir::
