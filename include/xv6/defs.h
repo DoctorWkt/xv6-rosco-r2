@@ -17,8 +17,8 @@ void send_ch375_cmd(unsigned char cmd);
 void send_ch375_data(unsigned char cmd);
 unsigned char read_ch375_data(void);
 unsigned char get_ch375_status(void);
-void setlock(void *lockptr);
 void setbasereg(int val);
+void swtch(int newbasereg, void * newSP);
 void cli();
 void sti();
 
@@ -95,7 +95,7 @@ void		pinit(void);
 void		userinit(void);
 struct proc *	myproc(void);
 void		sched(void);
-void		sleep(void *chan, struct spinlock *lk);
+void		sleep(void *chan);
 void		wakeup(void *chan);
 int		kill(int pid);
 

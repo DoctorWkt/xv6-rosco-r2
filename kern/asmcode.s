@@ -132,15 +132,6 @@ setbasereg::
 	move.b 7(A7),BASE_REG
 	rts
 
-; Given the address of a lock as the first
-; argument on the stack, loop until the lock is set
-setlock::
-	move.l 4(A7),A0
-.lockloop
-	tas (A0)
-	bne .lockloop
-	rts
-
 ; Disable all interrupts
 cli::
 	or.w	#$0700,SR
@@ -149,6 +140,20 @@ cli::
 ; Enable all interrupts
 sti::
 	and.w	#$F0FF,SR
+	rts
+
+; Given a new base register and a new stack pointer,
+; save all the registers on the existing (old) stack,
+; change address space using the new base pointer and
+; restore the registers from the new stack
+;
+; void swtch(int newbasereg, void * newSP)
+swtch::
+	movem.l   d0-d7/a0-a6,-(a7)	; Save the old registers
+	move.l	  64(a7),d0		; Get the new basereg
+	move.l	  68(a7),a7		; Set the new stack pointer
+	move.b    d0,BASE_REG		; Change the address space
+	movem.l   (a7)+,d0-d7/a0-a6	; Restore the new registers
 	rts
 
 ; The system call trap handler.

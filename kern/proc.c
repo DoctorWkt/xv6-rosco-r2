@@ -52,36 +52,60 @@ void userinit(void) {
   p->state = RUNNABLE;
 }
 
-void sched(void) { }
+// Find a process that is ready to run and
+// context switch to that process. We return
+// in the new process' context having saved
+// the old process' context
+void scheduler(void) {
+  void *cursp;
+  struct proc *p;
+
+  // Save this process' stack pointer
+  __asm__ __volatile__(
+        "    move.l %%sp,%0\n"
+        : "=r" (cursp));
+  proc->savedSP= cursp;
+
+  // Loop looking for a runnable process
+  while (1) {
+    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+      if (p->state == RUNNABLE) {
+
+      	proc = p;		// It's the new current process
+      	proc->state = RUNNING;	// and it is running
+
+      	// Switch to its context and then return
+      	swtch(proc->basereg, proc->savedSP);
+      }
+    }
+    cprintf("Didn't find a runnable process in scheduler()\n");
+  }
+}
 
 // Sleep on chan.
 void
-sleep(void *chan, struct spinlock *lk)
+sleep(void *chan)
 {
-  if(proc== NULL)
+  if (proc== NULL)
     panic("sleep");
-
-  if(lk == 0)
-    panic("sleep without lk");
 
   // Go to sleep.
   proc->chan = chan;
   proc->state = SLEEPING;
-  sched();
+  scheduler();
 
   // Tidy up.
   proc->chan = 0;
 }
 
 // Wake up all processes sleeping on chan.
-// The ptable lock must be held.
 static void
 wakeup1(void *chan)
 {
   struct proc *p;
 
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->state == SLEEPING && p->chan == chan)
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    if (p->state == SLEEPING && p->chan == chan)
       p->state = RUNNABLE;
 }
 
@@ -100,11 +124,11 @@ kill(int pid)
 {
   struct proc *p;
 
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p->pid == pid){
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if (p->pid == pid){
       p->killed = 1;
       // Wake process from sleep if necessary.
-      if(p->state == SLEEPING)
+      if (p->state == SLEEPING)
         p->state = RUNNABLE;
       return 0;
     }
