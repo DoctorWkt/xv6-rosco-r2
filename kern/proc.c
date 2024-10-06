@@ -1,6 +1,7 @@
 #include <xv6/types.h>
 #include <xv6/defs.h>
 #include <xv6/param.h>
+#include <xv6/fcntl.h>
 #define PROC_C 1
 #include <xv6/proc.h>
 
@@ -134,4 +135,106 @@ kill(int pid)
     }
   }
   return -1;
+}
+
+// When a program exits, we reexec the shell
+
+static char *argv[]= { "/bin/sh", NULL };
+
+void sys_exit(int exitvalue)
+{
+  struct proc *p;
+  int fd;
+
+  // Save the exit value
+  proc->exitstatus= exitvalue;
+
+#ifdef NOTYET
+  if (proc == initproc)
+    panic("init exiting");
+#endif
+
+  // Close all open files.
+  for (fd = 0; fd < NOFILE; fd++) {
+    if (proc->ofile[fd]) {
+      fileclose(proc->ofile[fd]);
+      proc->ofile[fd] = 0;
+    }
+  }
+
+  // Free the program's memory XXX lose it as wait() will do this
+  freeframes(proc->pid);
+
+#ifdef NOTYET
+  begin_op();
+  iput(proc->cwd);
+  end_op();
+  proc->cwd = 0;
+
+  // Parent might be sleeping in wait().
+  wakeup1(proc->parent);
+
+  // Pass abandoned children to init.
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->parent == proc){
+      p->parent = initproc;
+      if(p->state == ZOMBIE)
+        wakeup1(initproc);
+    }
+  }
+
+  // Jump into the scheduler, never to return.
+  proc->state = ZOMBIE;
+  sched();
+  panic("zombie exit");
+#endif
+
+  // Reopen stdin, stdout, stderr
+  sys_open("/tty", O_RDONLY);
+  sys_open("/tty", O_WRONLY);
+  sys_open("/tty", O_WRONLY);
+
+  sys_exec(argv[0], argv);
+  panic("sys_exit");
+}
+
+// Wait for a child process to exit and return its pid.
+// Return -1 if this process has no children.
+// Return the child's exit status in the optional pointer argument
+int sys_wait(int *statusptr)
+{
+  struct proc *p;
+  int havekids, pid;
+
+  while (1) {
+    // Scan through table looking for zombie children.
+    havekids = 0;
+    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+      if (p->parent != proc)
+        continue;
+      havekids = 1;
+      if (p->state == ZOMBIE){
+        // Found one.
+        pid = p->pid;
+        freeframes(p->pid);
+        p->state = UNUSED;
+        p->pid = 0;
+        p->parent = 0;
+        p->name[0] = 0;
+        p->killed = 0;
+        if (statusptr) {
+          *statusptr= p->exitstatus | (p->killed ? 0x100 : 0);
+        }
+        return(pid);
+      }
+    }
+
+    // No point waiting if we don't have any children.
+    if (!havekids || proc->killed) {
+      return(-1);
+    }
+
+    // Wait for children to exit.  (See wakeup1 call in exit() above.)
+    sleep(proc);
+  }
 }

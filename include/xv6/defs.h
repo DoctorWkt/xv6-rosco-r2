@@ -43,7 +43,6 @@ void		panic(char *);
 
 // exec.c
 void		sys_exec(char *pathname, char *argv[]);
-void		sys_exit();
 
 // file.c
 struct file*    filealloc(void);
@@ -93,11 +92,12 @@ void            end_op();
 // proc.c
 void		pinit(void);
 void		userinit(void);
-struct proc *	myproc(void);
-void		sched(void);
+void		scheduler(void);
 void		sleep(void *chan);
 void		wakeup(void *chan);
 int		kill(int pid);
+void		sys_exit(int exitvalue);
+int		sys_wait(int *statusptr);
 
 // string.c
 #ifndef USE_NATIVE_STRINGS

@@ -183,7 +183,7 @@ SYSCALL_HANDLER::
 	dc.l	sys_write	;  4 = write
 	dc.l	sys_open	;  5 = open
 	dc.l	sys_close	;  6 = close
-	dc.l	.NULLSYS	;  7 = wait
+	dc.l	sys_wait	;  7 = wait
 	dc.l	.NULLSYS	;  8 = creat
 	dc.l	sys_link	;  9 = link
 	dc.l	sys_unlink	; 10 = unlink

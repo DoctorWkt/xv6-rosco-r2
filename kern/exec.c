@@ -178,25 +178,3 @@ void sys_exec(char *pathname, char *argv[]) {
 	"    jmp 0x100000\n"			// XXX Same as START_ADDR
 	: [temp] "+d"(exec_lowptr));
 }
-
-// When a program exits, we reexec the shell
-
-static char *argv[]= { "/bin/sh", NULL };
-
-void sys_exit()
-{
-  // Close all file handles
-  for (int i=0; i<NOFILE; i++)
-    sys_close(i);
-
-  // Free the program's memory
-  freeframes(proc->pid);
-
-  // Reopen stdin, stdout, stderr
-  sys_open("/tty", O_RDONLY);
-  sys_open("/tty", O_WRONLY);
-  sys_open("/tty", O_WRONLY);
-
-  sys_exec(argv[0], argv);
-  panic("sys_exit");
-}

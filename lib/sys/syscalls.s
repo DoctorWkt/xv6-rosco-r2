@@ -40,6 +40,11 @@ close::
 	move.l  #6,D1			; Syscall 6
 	jmp	do_syscall
 
+wait::
+	movem.l D1/A1,-(A7)		; Save two regs
+	move.l  #7,D1			; Syscall 7
+	jmp	do_syscall
+
 link::
 	movem.l D1/A1,-(A7)		; Save two regs
 	move.l  #9,D1			; Syscall 9
