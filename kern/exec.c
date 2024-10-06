@@ -74,6 +74,7 @@ void sys_exec(char *pathname, char *argv[]) {
     set_errno(ENOMEM); return;
   }
   proc->basereg= basereg;
+  proc->nframes= nframes;
 
   // We copy the arguments down to kernel memory,
   // then copy them again to the new program's

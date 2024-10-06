@@ -4,6 +4,7 @@
 #include <xv6/fcntl.h>
 #define PROC_C 1
 #include <xv6/proc.h>
+#include <errno.h>
 
 struct {
   struct proc proc[NPROC];
@@ -237,4 +238,49 @@ int sys_wait(int *statusptr)
     // Wait for children to exit.  (See wakeup1 call in exit() above.)
     sleep(proc);
   }
+}
+
+// Create a new process copying proc as the parent.
+// Returns -1 if failure, 0 if child, pid if parent.
+int sys_fork() {
+  struct proc *np;
+  int i, basereg;
+  int pid;
+
+  // Allocate a new process.
+  if ((np = allocproc()) == 0) {
+    set_errno(EAGAIN); return(-1);
+  }
+
+  // Allocate memory to the new process
+  basereg= allocframes(proc->pid, proc->nframes);
+  if (basereg==-1) {
+    np->state = UNUSED;
+    set_errno(ENOMEM); return(-1);
+  }
+
+  // Set up the proc table entry
+  np->basereg= basereg;
+  np->nframes= proc->nframes;
+  np->parent = proc;
+  np->chan= (void *)0;
+  np->killed= 0;
+  safestrcpy(np->name, proc->name, sizeof(proc->name));
+
+  // Copy over the fds and the cwd
+  for (i = 0; i < NOFILE; i++)
+    if (proc->ofile[i])
+      np->ofile[i] = filedup(proc->ofile[i]);
+  np->cwd = idup(proc->cwd);
+
+  // Copy the parent's text, data and bss
+
+  // Copy the parent's stack
+
+  // Mark the process as runnable
+  np->state = RUNNABLE;
+
+  // Return the pid, or 0 if the child XXX TO DO!!
+  pid = np->pid;
+  return(pid);
 }
