@@ -77,6 +77,7 @@ void sys_exec(char *pathname, char *argv[]) {
   proc->nframes= nframes;
   proc->curbrk= ahdr.a_bss_end;
   proc->bssend= ahdr.a_bss_end;
+  safestrcpy(proc->name, pathname, sizeof(proc->name));
 
   // We copy the arguments down to kernel memory,
   // then copy them again to the new program's

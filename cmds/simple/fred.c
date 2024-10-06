@@ -3,18 +3,20 @@
 #include <termios.h>
 #include <unistd.h>
 #include <errno.h>
-#include <fcntl.h>
+#include <stdlib.h>
 
-// errno test
+// fork test
 
 
-int main() {
-  int err;
-  char ch;
+void main() {
+  int pid;
 
-  err= open("/README", O_RDONLY);
-  printf("open README, err %d errno %d\n", err, errno);
-  err= open("/FOOBALL", O_RDONLY);
-  printf("open README, err %d errno %d\n", err, errno);
-  return (0);
+  pid= fork();
+  switch (pid) {
+    case -1: printf("fork failed!\n"); break;
+    case 0:  printf("In the child\n"); break;
+    default: printf("In the parent, child pid %d\n", pid);
+  }
+
+  exit(0);
 }

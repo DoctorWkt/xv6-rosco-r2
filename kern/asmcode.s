@@ -184,7 +184,7 @@ SYSCALL_HANDLER::
 	dc.l	sys_open	;  5 = open
 	dc.l	sys_close	;  6 = close
 	dc.l	sys_wait	;  7 = wait
-	dc.l	.NULLSYS	;  8 = creat
+	dc.l	sys_fork	;  8 = fork
 	dc.l	sys_link	;  9 = link
 	dc.l	sys_unlink	; 10 = unlink
 	dc.l	sys_sbrk	; 11 = sys_sbrk

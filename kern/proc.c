@@ -249,13 +249,19 @@ int sys_wait(int *statusptr)
 // stack pointer off the stack.
 
 static struct proc *copynp;
-static void *copysp;
+static uint copysp;
 
 void copyaddrspace(struct proc *np) {
+  char *srctxt, *dsttxt;	// Base of parent and child code+data+bss
+  char *srcstk, *dststk;	// Base of parent and child stack
+  char *exprambase;		// Base of expansion RAM
+  uint txtcnt, stkcnt;		// Size of code+data+bss and stack
+
   // Get np off the stack
   copynp= np;
 
   // Save this process' stack pointer
+  // as an offset from the process' base
   __asm__ __volatile__(
         "    move.l %%sp,%0\n"
         : "=r" (copysp));
@@ -264,21 +270,58 @@ void copyaddrspace(struct proc *np) {
   // change the base register
   __asm__ ("    move.l #0x100000,%sp");
 
+cprintf("Stack pointer is 0x%x\n", copysp - 0x100000);
+cprintf("Current brk is 0x%x\n", proc->curbrk - 0x100000);
+
+  // Now that we are on our own stack, calculate
+  // how much memory to copy.
+  // Expansion RAM starts here.
+  exprambase= (char *)0x100000;
+
+  // Use the base regs to work out
+  // where each process' memory starts.
+  // The brk value is how much to copy.
+  srctxt= &exprambase[proc->basereg << 16];
+  dsttxt= &exprambase[copynp->basereg << 16];
+  txtcnt= proc->curbrk - 0x100000;
+
+  // The stack pointer tells us the base
+  // of the stack, but we must add on the
+  // base register offsets
+  srcstk= &exprambase[(proc->basereg << 16) + copysp - 0x100000];
+  dststk= &exprambase[(copynp->basereg << 16) + copysp - 0x100000];
+
+  // Work out where the parent's memory space ends
+  // and then subtract the stack pointer to get the
+  // amount to copy
+  stkcnt= 0x100000 + (copynp->nframes << 16) - copysp;
+
+cprintf("Copying txt: %d bytes from 0x%x to 0x%x\n", txtcnt, srctxt, dsttxt);
+cprintf("Copying stk: %d bytes from 0x%x to 0x%x\n", stkcnt, srcstk, dststk);
+
   // Set the base register to zero so that
   // we can see all the expansion RAM
   setbasereg(0);
 
-  // Copy the parent's text, data and bss
-
-  // Copy the parent's stack
+  // Copy the parent's text, data and bss.
+  // Then copy the parent's stack
+  memmove(dsttxt, srctxt, txtcnt);
+  memmove(dststk, srcstk, stkcnt);
 
   // Restore the base register of the parent
   setbasereg(proc->basereg);
 
-  // Restore the stack pointer
+  // Restore the stack pointer. We also do
+  // the manual work of restoring registers
+  // and returning. Why? Because the compiler
+  // delays the popping of function arguments
+  // until _after_ this _asm_ code runs, so it
+  // destroys the correct stack pointer value, sigh.
   __asm__ (
         "    move.l %[temp],%%sp\n"
         : [temp] "+d"(copysp));
+  __asm__ ( "    moveml %sp@+,%d2-%d6/%a2-%a3");
+  __asm__ ( "    rts");
 }
 
 // Create a new process copying proc as the parent.
@@ -293,8 +336,10 @@ int sys_fork() {
     set_errno(EAGAIN); return(-1);
   }
 
+cprintf("Allocated process with pid %d\n", np->pid);
+
   // Allocate memory to the new process
-  basereg= allocframes(proc->pid, proc->nframes);
+  basereg= allocframes(np->pid, proc->nframes);
   if (basereg==-1) {
     np->state = UNUSED;
     set_errno(ENOMEM); return(-1);
@@ -307,6 +352,8 @@ int sys_fork() {
   np->chan= (void *)0;
   np->killed= 0;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
+
+cprintf("Allocated %d frames at breg %d to %s\n", np->nframes, np->basereg, np->name);
 
   // Copy over the fds and the cwd
   for (i = 0; i < NOFILE; i++)
