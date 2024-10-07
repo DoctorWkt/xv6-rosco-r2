@@ -38,7 +38,7 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
 
-  // XXX More to do here
+  // XXX Any more to do here?
   return(p);
 }
 
@@ -57,31 +57,31 @@ void userinit(void) {
 // Find a process that is ready to run and
 // context switch to that process. We return
 // in the new process' context having saved
-// the old process' context
-void scheduler(void) {
-  void *cursp;
-  struct proc *p;
+// the old process' context.
+//
+void scheduler() {
+  struct proc *oldproc, *p;
 
-  // Save this process' stack pointer
-  __asm__ __volatile__(
-        "    move.l %%sp,%0\n"
-        : "=r" (cursp));
-  proc->savedSP= cursp;
+  // Save a pointer to the current process entry
+  oldproc= proc;
 
   // Loop looking for a runnable process
   while (1) {
     for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
       if (p->state == RUNNABLE) {
+        proc = p;		// It's the new current process
+        proc->state = RUNNING;	// and it is running
 
-      	proc = p;		// It's the new current process
-      	proc->state = RUNNING;	// and it is running
-
-      	// Switch to its context and then return
-      	swtch(proc->basereg, proc->savedSP);
+        // Switch to its context and then return
+        cprintf("About to swtch(%d,0x%p) to pid %d\n",
+		proc->basereg, proc->savedSP, proc->pid);
+        swtch(proc, oldproc);
+	return;
       }
     }
     cprintf("Didn't find a runnable process in scheduler()\n");
   }
+
 }
 
 // Sleep on chan.
@@ -328,8 +328,8 @@ cprintf("Copying stk: %d bytes from 0x%x to 0x%x\n", stkcnt, srcstk, dststk);
 // Returns -1 if failure, 0 if child, pid if parent.
 int sys_fork() {
   struct proc *np;
+  void *cursp;
   int i, basereg;
-  int pid;
 
   // Allocate a new process.
   if ((np = allocproc()) == 0) {
@@ -353,7 +353,8 @@ cprintf("Allocated process with pid %d\n", np->pid);
   np->killed= 0;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
 
-cprintf("Allocated %d frames at breg %d to %s\n", np->nframes, np->basereg, np->name);
+cprintf("Allocated %d frames at breg %d to %s\n",
+	np->nframes, np->basereg, np->name);
 
   // Copy over the fds and the cwd
   for (i = 0; i < NOFILE; i++)
@@ -362,14 +363,39 @@ cprintf("Allocated %d frames at breg %d to %s\n", np->nframes, np->basereg, np->
   np->cwd = idup(proc->cwd);
 
   // Copy the parent's memory to the child
+  // Because we saved the state of the stack
+  // at this point, the child will return
+  // immediately after this function call.
+  // We keep an off-stack copy of np so that
+  // the comparison after the copy will work
+  copynp= np;
   copyaddrspace(np);
 
-  // Mark the process as runnable
-  np->state = RUNNABLE;
+  // If np is the running process, then we
+  // are the child. Simply return 0 :-)
+  if (copynp == proc)
+    return(0);
 
-  // Return the pid, or 0 if the child XXX TO DO!!
-  pid = np->pid;
-  return(pid);
+  // Mark both parent and child as runnable
+  proc->state= np->state = RUNNABLE;
+
+  // Use the parent's stack pointer
+  // to set up the child's stack pointer.
+  // Subtract 72 to make up for the non-existent
+  // registers on the stack
+  __asm__ __volatile__(
+          "    move.l %%sp,%0\n"
+          : "=r" (cursp));
+  np->savedSP= cursp - 72;
+
+  // Call scheduler()
+  cprintf("Entering the scheduler, current pid %d\n", proc->pid);
+  scheduler();
+
+  cprintf("Back from the scheduler, current pid %d\n", proc->pid);
+
+  // Return the pid as we are the parent
+  return(np->pid);
 }
 
 int sys_brk(const void *addr) {

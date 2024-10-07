@@ -2,14 +2,14 @@ enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
 struct proc {
+  void *savedSP;	       // Saved stack pointer
+  int basereg;		       // Base register
+  int nframes;		       // Number of frames used
   enum procstate state;        // Process state
   int pid;                     // Process ID
   struct proc *parent;         // Parent process
-  int basereg;		       // Base register
-  int nframes;		       // Number of frames used
   uint curbrk;	               // Current brk value
   uint bssend;	               // Original end of the bss
-  void *savedSP;	       // Saved stack pointer
   void *chan;                  // If non-zero, sleeping on chan
   int killed;                  // If non-zero, have been killed
   int exitstatus;              // Exit value, suitable for wait()

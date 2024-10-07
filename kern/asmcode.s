@@ -142,16 +142,21 @@ sti::
 	and.w	#$F0FF,SR
 	rts
 
-; Given a new base register and a new stack pointer,
-; save all the registers on the existing (old) stack,
-; change address space using the new base pointer and
-; restore the registers from the new stack
+; swtch() takes two proc pointers: the new process and
+; the old process. swtch() saves all the registers on the
+; existing (old) stack, saves the stack pointer at this
+; point in the old proc, changes address space using the
+; new proc base pointer, sets the new proc stack pointer
+; and restores the registers from the new stack.
 ;
-; void swtch(int newbasereg, void * newSP)
+; void swtch(struct proc *new, struct proc *old)
 swtch::
-	movem.l   d0-d7/a0-a6,-(a7)	; Save the old registers
-	move.l	  64(a7),d0		; Get the new basereg
-	move.l	  68(a7),a7		; Set the new stack pointer
+	movem.l   d0-d7/a0-a6,-(a7)	; Save the registers
+	move.l    68(a7),a0		; Get the old proc pointer
+	move.l	  a7,(a0)		; Save SP in old->savedSP
+	move.l    64(a7),a0		; Get the new proc pointer
+	move.l	  4(a0),d0		; Get the new->basereg value
+	move.l	  (a0),a7		; Set SP from new->savedSP
 	move.b    d0,BASE_REG		; Change the address space
 	movem.l   (a7)+,d0-d7/a0-a6	; Restore the new registers
 	rts

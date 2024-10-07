@@ -18,7 +18,7 @@ void send_ch375_data(unsigned char cmd);
 unsigned char read_ch375_data(void);
 unsigned char get_ch375_status(void);
 void setbasereg(int val);
-void swtch(int newbasereg, void * newSP);
+void swtch(struct proc *new, struct proc *old);
 void cli();
 void sti();
 
