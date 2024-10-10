@@ -16,7 +16,7 @@ char CH375_STATUS= 0;
 char DUART_ECHO_A= 1;
 
 // Our variables
-static char *argv[]= { "/bin/sh" };
+static char *argv[]= { "/bin/fred" };
 
 void kmain()
 {

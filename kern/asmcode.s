@@ -142,23 +142,28 @@ sti::
 	and.w	#$F0FF,SR
 	rts
 
-; swtch() takes two proc pointers: the new process and
-; the old process. swtch() saves all the registers on the
-; existing (old) stack, saves the stack pointer at this
-; point in the old proc, changes address space using the
-; new proc base pointer, sets the new proc stack pointer
-; and restores the registers from the new stack.
+; Return the current stack pointer,
+; compensating for the jsr here
+getsp::
+	move.l	a7,d0
+	addq.l	#4,d0
+	rts
+
+; swtch() takes context pointers for the old and new processes, as well
+; as the new base register value. swtch() saves all the registers on the
+; old stack, changes address space using the new base pointer, sets the
+; new proc stack pointer and restores the registers from the new stack.
 ;
-; void swtch(struct proc *new, struct proc *old)
+; void swtch(struct context *old, struct context *new, int basereg)
 swtch::
-	movem.l   d0-d7/a0-a6,-(a7)	; Save the registers
-	move.l    68(a7),a0		; Get the old proc pointer
-	move.l	  a7,(a0)		; Save SP in old->savedSP
-	move.l    64(a7),a0		; Get the new proc pointer
-	move.l	  4(a0),d0		; Get the new->basereg value
-	move.l	  (a0),a7		; Set SP from new->savedSP
+	move.l	  4(a7),a0		; Get the old context pointer,
+	move.l	  8(a7),a1		; the new context pointer
+	move.l	  12(a7),d0		; and the base register.
+	movem.l   d2-d7/a2-a6,-(a7)	; Save the registers
+	move.l	  a7,(a0)		; Switch stacks
+	move.l	  a1,a7
 	move.b    d0,BASE_REG		; Change the address space
-	movem.l   (a7)+,d0-d7/a0-a6	; Restore the new registers
+	movem.l   (a7)+,d2-d7/a2-a6	; Restore the new registers
 	rts
 
 ; The system call trap handler.

@@ -18,9 +18,10 @@ void send_ch375_data(unsigned char cmd);
 unsigned char read_ch375_data(void);
 unsigned char get_ch375_status(void);
 void setbasereg(int val);
-void swtch(struct proc *new, struct proc *old);
 void cli();
 void sti();
+uint getsp();
+void swtch(struct context *old, struct context *new, int basereg);
 
 // blk.c
 void blkinit(void);

@@ -10,12 +10,18 @@
 
 void main() {
   int pid;
+  int status= 45;
 
   pid= fork();
   switch (pid) {
-    case -1: printf("fork failed!\n"); break;
-    case 0:  printf("In the child\n"); break;
-    default: printf("In the parent, child pid %d\n", pid);
+    case -1: cprintf("fork failed!\n"); break;
+    case 0:  cprintf("In the child\n"); exit(3);
+    default: cprintf("In the parent, waiting for child pid %d statusptr %p\n",
+		pid, &status);
+	     pid= wait(&status);
+	     cprintf("Back from wait, got pid %d status %d ptr %p\n",
+			pid, status, &status);
+	     while (1) ;
   }
 
   exit(0);

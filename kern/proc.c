@@ -73,31 +73,40 @@ void scheduler() {
         proc->state = RUNNING;	// and it is running
 
         // Switch to its context and then return
-        cprintf("About to swtch(%d,0x%p) to pid %d\n",
-		proc->basereg, proc->savedSP, proc->pid);
-        swtch(proc, oldproc);
+        cprintf("About to swtch(basereg %d, sp 0x%p) to pid %d\n",
+		proc->basereg, proc->context, proc->pid);
+        swtch(oldproc->context, proc->context, proc->basereg);
 	return;
       }
     }
     cprintf("Didn't find a runnable process in scheduler()\n");
   }
+}
 
+// A fork()'s child returns
+// via this function
+int forkret() {
+  return(0);
+}
+
+// Return from sleep
+void sleepret() {
 }
 
 // Sleep on chan.
-void
-sleep(void *chan)
-{
-  if (proc== NULL)
+void sleep(void *chan) {
+  if (chan== NULL || proc== NULL)
     panic("sleep");
 
-  // Go to sleep.
+  // Go to sleep. Wake up in sleepret()
   proc->chan = chan;
   proc->state = SLEEPING;
+  proc->context= (struct context *)(getsp()-88);
+  proc->context->pc= (uint)sleepret;
   scheduler();
-
   // Tidy up.
   proc->chan = 0;
+  return;
 }
 
 // Wake up all processes sleeping on chan.
@@ -148,6 +157,7 @@ void sys_exit(int exitvalue)
   int fd;
 
   // Save the exit value
+  cprintf("sys_exit saving status %d\n", exitvalue);
   proc->exitstatus= exitvalue;
 
 #ifdef NOTYET
@@ -163,13 +173,11 @@ void sys_exit(int exitvalue)
     }
   }
 
-  // Free the program's memory XXX lose it as wait() will do this
-  freeframes(proc->pid);
-
 #ifdef NOTYET
   begin_op();
   iput(proc->cwd);
   end_op();
+#endif
   proc->cwd = 0;
 
   // Parent might be sleeping in wait().
@@ -186,17 +194,8 @@ void sys_exit(int exitvalue)
 
   // Jump into the scheduler, never to return.
   proc->state = ZOMBIE;
-  sched();
+  scheduler();
   panic("zombie exit");
-#endif
-
-  // Reopen stdin, stdout, stderr
-  sys_open("/tty", O_RDONLY);
-  sys_open("/tty", O_WRONLY);
-  sys_open("/tty", O_WRONLY);
-
-  sys_exec(argv[0], argv);
-  panic("sys_exit");
 }
 
 // Wait for a child process to exit and return its pid.
@@ -215,23 +214,24 @@ int sys_wait(int *statusptr)
         continue;
       havekids = 1;
       if (p->state == ZOMBIE){
-        // Found one.
+        // Found one. Free its memory
+	// and clear the proc table entry
         pid = p->pid;
         freeframes(p->pid);
         p->state = UNUSED;
         p->pid = 0;
         p->parent = 0;
         p->name[0] = 0;
-        p->killed = 0;
         if (statusptr) {
           *statusptr= p->exitstatus | (p->killed ? 0x100 : 0);
         }
+        p->killed = 0;
         return(pid);
       }
     }
 
     // No point waiting if we don't have any children.
-    if (!havekids || proc->killed) {
+    if (!havekids) {
       return(-1);
     }
 
@@ -261,10 +261,9 @@ void copyaddrspace(struct proc *np) {
   copynp= np;
 
   // Save this process' stack pointer
-  // as an offset from the process' base
-  __asm__ __volatile__(
-        "    move.l %%sp,%0\n"
-        : "=r" (copysp));
+  // and use it for the child's context
+  copysp= getsp();
+  copynp->context= (struct context *)(copysp+8);
 
   // Move to the kernel stack so we can
   // change the base register
@@ -308,6 +307,10 @@ cprintf("Copying stk: %d bytes from 0x%x to 0x%x\n", stkcnt, srcstk, dststk);
   memmove(dsttxt, srctxt, txtcnt);
   memmove(dststk, srcstk, stkcnt);
 
+  // Set the child to return to forkret()
+  setbasereg(copynp->basereg);
+  copynp->context->pc= (uint)forkret;
+
   // Restore the base register of the parent
   setbasereg(proc->basereg);
 
@@ -346,6 +349,7 @@ cprintf("Allocated process with pid %d\n", np->pid);
   }
 
   // Set up the proc table entry
+  np->state = RUNNABLE;
   np->basereg= basereg;
   np->nframes= proc->nframes;
   np->parent = proc;
@@ -363,38 +367,9 @@ cprintf("Allocated %d frames at breg %d to %s\n",
   np->cwd = idup(proc->cwd);
 
   // Copy the parent's memory to the child
-  // Because we saved the state of the stack
-  // at this point, the child will return
-  // immediately after this function call.
-  // We keep an off-stack copy of np so that
-  // the comparison after the copy will work
-  copynp= np;
   copyaddrspace(np);
 
-  // If np is the running process, then we
-  // are the child. Simply return 0 :-)
-  if (copynp == proc)
-    return(0);
-
-  // Mark both parent and child as runnable
-  proc->state= np->state = RUNNABLE;
-
-  // Use the parent's stack pointer
-  // to set up the child's stack pointer.
-  // Subtract 72 to make up for the non-existent
-  // registers on the stack
-  __asm__ __volatile__(
-          "    move.l %%sp,%0\n"
-          : "=r" (cursp));
-  np->savedSP= cursp - 72;
-
-  // Call scheduler()
-  cprintf("Entering the scheduler, current pid %d\n", proc->pid);
-  scheduler();
-
-  cprintf("Back from the scheduler, current pid %d\n", proc->pid);
-
-  // Return the pid as we are the parent
+  // Return the pid of the child
   return(np->pid);
 }
 
@@ -402,9 +377,7 @@ int sys_brk(const void *addr) {
   uint cursp;
 
   // Get the current stack pointer
-  __asm__ __volatile__(
-        "    move.l %%sp,%0\n"
-        : "=r" (cursp));
+  cursp= getsp();
 
   // If the desired address is below bssend
   // or too close to the stack, return -1
