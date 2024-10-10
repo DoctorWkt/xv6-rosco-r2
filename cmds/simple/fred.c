@@ -4,14 +4,16 @@
 #include <unistd.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <sys/wait.h>
+#include <cprintf.h>
 
 // fork test
-
 
 void main() {
   int pid;
   int status= 45;
 
+  cprintf("In /bin/fed, about to fork()\n");
   pid= fork();
   switch (pid) {
     case -1: cprintf("fork failed!\n"); break;

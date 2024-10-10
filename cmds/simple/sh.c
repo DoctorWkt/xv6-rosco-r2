@@ -401,6 +401,6 @@ int main() {
 #endif
 
   // Now exec the new program
-  exec(argv[0], argv);
+  execv(argv[0], argv);
   exit(0);			// Restart ourselves if the exec() failed
 }

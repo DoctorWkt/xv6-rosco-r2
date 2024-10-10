@@ -16,7 +16,7 @@ char CH375_STATUS= 0;
 char DUART_ECHO_A= 1;
 
 // Our variables
-static char *argv[]= { "/bin/fred" };
+static char *argv[]= { "/bin/init", NULL };
 
 void kmain()
 {
@@ -30,11 +30,6 @@ void kmain()
   initlog();	   // Block logging
   pinit();	   // Process table
   finit();	   // Free frame list
-
-  // Open stdin, stdout, stderr
-  sys_open("/tty", O_RDONLY);
-  sys_open("/tty", O_WRONLY);
-  sys_open("/tty", O_WRONLY);
 
   // Eventually this will initialise the first program.
   // For now, it sets up the working directory.
