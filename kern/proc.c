@@ -99,6 +99,8 @@ void sleep(void *chan) {
     panic("sleep");
 
   // Go to sleep. Wake up in sleepret()
+  // The offset for getsp() found by inspecting
+  // the stack in a debugger
   proc->chan = chan;
   proc->state = SLEEPING;
   proc->context= (struct context *)(getsp()-88);
@@ -173,6 +175,10 @@ void sys_exit(int exitvalue)
     }
   }
 
+  // Free the memory now, not when the parent
+  // wakes up to get the child's status
+  freeframes(proc->pid);
+
 #ifdef NOTYET
   begin_op();
   iput(proc->cwd);
@@ -214,10 +220,8 @@ int sys_wait(int *statusptr)
         continue;
       havekids = 1;
       if (p->state == ZOMBIE){
-        // Found one. Free its memory
-	// and clear the proc table entry
+        // Found one. clear the proc table entry
         pid = p->pid;
-        freeframes(p->pid);
         p->state = UNUSED;
         p->pid = 0;
         p->parent = 0;
@@ -261,7 +265,9 @@ void copyaddrspace(struct proc *np) {
   copynp= np;
 
   // Save this process' stack pointer
-  // and use it for the child's context
+  // and use it for the child's context.
+  // The offset for getsp() found by inspecting
+  // the stack in a debugger
   copysp= getsp();
   copynp->context= (struct context *)(copysp+8);
 
