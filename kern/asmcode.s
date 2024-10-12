@@ -149,8 +149,8 @@ getsp::
 	addq.l	#4,d0
 	rts
 
-; saveregs() gets called to set up a newly-forked child's registers
-; by copying the parent's registers. It borrows from the swtch() code.
+; saveregs() gets called to set up a newly-forked
+; child's registers by copying the parent's registers.
 ;
 ; void saveregs(struct context *old)
 saveregs::
@@ -161,7 +161,7 @@ saveregs::
 ; swtch() takes context pointers for the old and new processes, as well
 ; as the new base register value. swtch() saves all the registers in the
 ; old context, restores the registers from the new context and sets the
-; base register. It then jumps to the new PC.
+; base register. It then returns to the new PC.
 ;
 ; void swtch(struct context *old, struct context *new, int basereg)
 swtch::
@@ -174,10 +174,6 @@ swtch::
 	move.b    d0,BASE_REG		; Change the address space
 	move.l	  48(a1),(a7)		; Make the new PC the return address
 	rts				; and return
-
-
-;	move.l	  48(a1),a0		; Jump to the new PC
-;	jmp	  (a0)
 
 ; The system call trap handler.
 ; D1 holds the system call number.

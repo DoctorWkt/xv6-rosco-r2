@@ -14,6 +14,7 @@ static struct proc *initproc;	// The init process
 
 int nextpid = 1;
 
+// Initialise the proc table
 void pinit(void) {
   struct proc *p;
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
@@ -24,7 +25,7 @@ void pinit(void) {
 // Look in the process table for an UNUSED proc.
 // If found, change state to EMBRYO and initialize
 // state required to run in the kernel.
-// Otherwise return 0.
+// Otherwise return NULL.
 static struct proc* allocproc(void) {
   struct proc *p;
   char *sp;
@@ -32,24 +33,24 @@ static struct proc* allocproc(void) {
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == UNUSED)
       goto found;
-  return 0;
+  return(NULL);
 
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
-
-  // XXX Any more to do here?
   return(p);
 }
 
-// Set up first user process.
+// Set up the first user process.
 void userinit(void) {
   struct proc *p;
   
   p = allocproc();
   proc= initproc = p;
 
-  // XXX More to do here
+  // XXX More to do here. We need to take
+  // some of the code currently in main()
+  // and put it here.
   p->cwd = namei("/");
   p->state = RUNNABLE;
 }
@@ -73,8 +74,10 @@ void scheduler() {
         proc->state = RUNNING;	// and it is running
 
         // Switch to its context and then return
+#if 0
         cprintf("About to swtch to pid %d basereg %d\n",
 		proc->pid, proc->basereg);
+#endif
         swtch(&(oldproc->context), &(proc->context), proc->basereg);
 	return;
       }
@@ -83,8 +86,9 @@ void scheduler() {
   }
 }
 
-// A fork()'s child returns
-// via this function
+// A fork()'s child returns via this function.
+// Restore the registers as if we were returning
+// from fork()
 int forkret() {
   __asm__ ( "    moveml %sp@+,%a2-%a5");
   return(0);
@@ -101,7 +105,7 @@ void sleep(void *chan) {
   scheduler();
 
   // Tidy up after we wake up
-  proc->chan = 0;
+  proc->chan = NULL;
   return;
 }
 
@@ -143,23 +147,19 @@ kill(int pid)
   return -1;
 }
 
-// When a program exits, we reexec the shell
-
-static char *argv[]= { "/bin/sh", NULL };
-
+// Stop the current process, release its
+// resources and get the scheduler to start
+// another process.
 void sys_exit(int exitvalue)
 {
   struct proc *p;
   int fd;
 
   // Save the exit value
-  cprintf("sys_exit saving status %d\n", exitvalue);
   proc->exitstatus= exitvalue;
 
-#ifdef NOTYET
   if (proc == initproc)
     panic("init exiting");
-#endif
 
   // Close all open files.
   for (fd = 0; fd < NOFILE; fd++) {
@@ -169,11 +169,11 @@ void sys_exit(int exitvalue)
     }
   }
 
-  // Free the memory now, not when the parent
-  // wakes up to get the child's status
+  // Free the process' memory
   freeframes(proc->pid);
 
 #ifdef NOTYET
+  // XXX Not sure why this causes a panic yet
   begin_op();
   iput(proc->cwd);
   end_op();
@@ -262,12 +262,13 @@ void copyaddrspace(struct proc *np) {
   // we can restore it later
   copysp= getsp();
 
+  // XXX
+  // XXX Find a way to make all the 0x100000 literals into symbols
+  // XXX
+
   // Move to the kernel stack so we can
   // change the base register
   __asm__ ("    move.l #0x100000,%sp");
-
-cprintf("Stack pointer is 0x%x\n", copysp - 0x100000);
-cprintf("Current brk is 0x%x\n", proc->curbrk - 0x100000);
 
   // Now that we are on our own stack, calculate
   // how much memory to copy.
@@ -292,8 +293,12 @@ cprintf("Current brk is 0x%x\n", proc->curbrk - 0x100000);
   // amount to copy
   stkcnt= 0x100000 + (copynp->nframes << 16) - copysp;
 
-cprintf("Copying txt: %d bytes from 0x%x to 0x%x\n", txtcnt, srctxt, dsttxt);
-cprintf("Copying stk: %d bytes from 0x%x to 0x%x\n", stkcnt, srcstk, dststk);
+#if 0
+   // If you turn this on, you need to change d5 to d6 in the
+   // assembly at the end of this function
+   cprintf("Copying txt: %d bytes from 0x%x to 0x%x\n", txtcnt, srctxt, dsttxt);
+   cprintf("Copying stk: %d bytes from 0x%x to 0x%x\n", stkcnt, srcstk, dststk);
+#endif
 
   // Set the base register to zero so that
   // we can see all the expansion RAM
@@ -317,7 +322,7 @@ cprintf("Copying stk: %d bytes from 0x%x to 0x%x\n", stkcnt, srcstk, dststk);
   __asm__ (
         "    move.l %[temp],%%sp\n"
         : [temp] "+d"(copysp));
-  __asm__ ( "    moveml %sp@+,%d2-%d6/%a2-%a3");
+  __asm__ ( "    moveml %sp@+,%d2-%d5/%a2-%a3");
   __asm__ ( "    rts");
 }
 
@@ -335,11 +340,13 @@ int sys_fork() {
   copysp= getsp()-4;
 
   // Allocate a new process.
-  if ((np = allocproc()) == 0) {
+  if ((np = allocproc()) == NULL) {
     set_errno(EAGAIN); return(-1);
   }
 
+#if 0
 cprintf("Allocated process with pid %d, proc ptr 0x%p\n", np->pid, np);
+#endif
 
   // Allocate memory to the new process
   basereg= allocframes(np->pid, proc->nframes);
@@ -353,7 +360,7 @@ cprintf("Allocated process with pid %d, proc ptr 0x%p\n", np->pid, np);
   np->basereg= basereg;
   np->nframes= proc->nframes;
   np->parent = proc;
-  np->chan= (void *)0;
+  np->chan= NULL;
   np->killed= 0;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
 
@@ -363,14 +370,6 @@ cprintf("Allocated process with pid %d, proc ptr 0x%p\n", np->pid, np);
   np->context.pc= (uint)forkret;
   np->context.sp= copysp;
   saveregs(&(np->context));
-
-cprintf("Context at 0x%p, sp at 0x%p, pc at 0x%p\n",
-	&(np->context), &(np->context.sp), &(np->context.pc));
-
-cprintf("Saved SP 0x%p in the context\n", copysp);
-
-cprintf("Allocated %d frames at breg %d to %s\n",
-	np->nframes, np->basereg, np->name);
 
   // Copy over the fds and the cwd
   for (i = 0; i < NOFILE; i++)
