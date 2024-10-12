@@ -1,24 +1,21 @@
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
-// Saved registers for kernel context switches.
-// Contexts are stored at the bottom of the stack they
-// describe; the stack pointer is the address of the context.
-// The layout of the context matches the layout of the stack in swtch()
-// at the "Switch stacks" comment. Switch doesn't save the PC explicitly,
-// but it is on the stack and allocproc() manipulates it.
+// Saved registers for kernel context switches. The layout of the
+// context matches the register move code in swtch().
 struct context {
-  uint d2;
-  uint d3;
-  uint d4;
-  uint d5;
-  uint d6;
-  uint d7;
-  uint a2;
-  uint a3;
-  uint a4;
-  uint a5;
-  uint a6;
-  uint pc;
+  uint d2;	// Offset  0
+  uint d3;	// Offset  4
+  uint d4;	// Offset  8
+  uint d5;	// Offset 12
+  uint d6;	// Offset 16
+  uint d7;	// Offset 20
+  uint a2;	// Offset 24
+  uint a3;	// Offset 28
+  uint a4;	// Offset 32
+  uint a5;	// Offset 36
+  uint a6;	// Offset 40
+  uint sp;	// Offset 44
+  uint pc;	// Offset 48
 };
 
 // Per-process state
@@ -31,7 +28,7 @@ struct proc {
   uint curbrk;	               // Current brk value
   uint bssend;	               // Original end of the bss
   void *chan;                  // If non-zero, sleeping on chan
-  struct context *context;     // Process' saved state
+  struct context context;      // Process' saved state
   int killed;                  // If non-zero, have been killed
   int exitstatus;              // Exit value, suitable for wait()
   struct file *ofile[NOFILE];  // Open files

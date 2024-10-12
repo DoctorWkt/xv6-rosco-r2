@@ -149,22 +149,35 @@ getsp::
 	addq.l	#4,d0
 	rts
 
+; saveregs() gets called to set up a newly-forked child's registers
+; by copying the parent's registers. It borrows from the swtch() code.
+;
+; void saveregs(struct context *old)
+saveregs::
+	move.l	  4(a7),a0		; Get the old context pointer
+	movem.l   d2-d7/a2-a6,(a0)	; Save the old registers
+	rts
+
 ; swtch() takes context pointers for the old and new processes, as well
-; as the new base register value. swtch() saves all the registers on the
-; old stack, changes address space using the new base pointer, sets the
-; new proc stack pointer and restores the registers from the new stack.
+; as the new base register value. swtch() saves all the registers in the
+; old context, restores the registers from the new context and sets the
+; base register. It then jumps to the new PC.
 ;
 ; void swtch(struct context *old, struct context *new, int basereg)
 swtch::
 	move.l	  4(a7),a0		; Get the old context pointer,
 	move.l	  8(a7),a1		; the new context pointer
 	move.l	  12(a7),d0		; and the base register.
-	movem.l   d2-d7/a2-a6,-(a7)	; Save the registers
-	move.l	  a7,(a0)		; Switch stacks
-	move.l	  a1,a7
+	movem.l   d2-d7/a2-a7,(a0)	; Save the old registers
+	move.l	  (a7),48(a0)		; and the old return address.
+	movem.l   (a1),d2-d7/a2-a7	; Get the new registers
 	move.b    d0,BASE_REG		; Change the address space
-	movem.l   (a7)+,d2-d7/a2-a6	; Restore the new registers
-	rts
+	move.l	  48(a1),(a7)		; Make the new PC the return address
+	rts				; and return
+
+
+;	move.l	  48(a1),a0		; Jump to the new PC
+;	jmp	  (a0)
 
 ; The system call trap handler.
 ; D1 holds the system call number.

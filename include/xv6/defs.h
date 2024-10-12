@@ -21,6 +21,7 @@ void setbasereg(int val);
 void cli();
 void sti();
 uint getsp();
+void saveregs(struct context *old);
 void swtch(struct context *old, struct context *new, int basereg);
 
 // blk.c

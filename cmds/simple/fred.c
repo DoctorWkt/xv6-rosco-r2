@@ -13,7 +13,7 @@ void main() {
   int pid;
   int status= 45;
 
-  cprintf("In /bin/fed, about to fork()\n");
+  cprintf("In /bin/fred, about to fork()\n");
   pid= fork();
   switch (pid) {
     case -1: cprintf("fork failed!\n"); break;

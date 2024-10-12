@@ -73,9 +73,9 @@ void scheduler() {
         proc->state = RUNNING;	// and it is running
 
         // Switch to its context and then return
-        cprintf("About to swtch(basereg %d, sp 0x%p) to pid %d\n",
-		proc->basereg, proc->context, proc->pid);
-        swtch(oldproc->context, proc->context, proc->basereg);
+        cprintf("About to swtch to pid %d basereg %d\n",
+		proc->pid, proc->basereg);
+        swtch(&(oldproc->context), &(proc->context), proc->basereg);
 	return;
       }
     }
@@ -86,11 +86,8 @@ void scheduler() {
 // A fork()'s child returns
 // via this function
 int forkret() {
+  __asm__ ( "    moveml %sp@+,%a2-%a5");
   return(0);
-}
-
-// Return from sleep
-void sleepret() {
 }
 
 // Sleep on chan.
@@ -98,15 +95,12 @@ void sleep(void *chan) {
   if (chan== NULL || proc== NULL)
     panic("sleep");
 
-  // Go to sleep. Wake up in sleepret()
-  // The offset for getsp() found by inspecting
-  // the stack in a debugger
+  // Go to sleep
   proc->chan = chan;
   proc->state = SLEEPING;
-  proc->context= (struct context *)(getsp()-88);
-  proc->context->pc= (uint)sleepret;
   scheduler();
-  // Tidy up.
+
+  // Tidy up after we wake up
   proc->chan = 0;
   return;
 }
@@ -264,12 +258,9 @@ void copyaddrspace(struct proc *np) {
   // Get np off the stack
   copynp= np;
 
-  // Save this process' stack pointer
-  // and use it for the child's context.
-  // The offset for getsp() found by inspecting
-  // the stack in a debugger
+  // Save the stack pointer so
+  // we can restore it later
   copysp= getsp();
-  copynp->context= (struct context *)(copysp+8);
 
   // Move to the kernel stack so we can
   // change the base register
@@ -313,9 +304,6 @@ cprintf("Copying stk: %d bytes from 0x%x to 0x%x\n", stkcnt, srcstk, dststk);
   memmove(dsttxt, srctxt, txtcnt);
   memmove(dststk, srcstk, stkcnt);
 
-  // Set the child to return to forkret()
-  setbasereg(copynp->basereg);
-  copynp->context->pc= (uint)forkret;
 
   // Restore the base register of the parent
   setbasereg(proc->basereg);
@@ -340,12 +328,18 @@ int sys_fork() {
   void *cursp;
   int i, basereg;
 
+  // Get a copy of our current stack pointer
+  // before the compiler leaves a whole heap
+  // of unpopped arguments on the stack.
+  // Make room for the forkret() return address.
+  copysp= getsp()-4;
+
   // Allocate a new process.
   if ((np = allocproc()) == 0) {
     set_errno(EAGAIN); return(-1);
   }
 
-cprintf("Allocated process with pid %d\n", np->pid);
+cprintf("Allocated process with pid %d, proc ptr 0x%p\n", np->pid, np);
 
   // Allocate memory to the new process
   basereg= allocframes(np->pid, proc->nframes);
@@ -362,6 +356,18 @@ cprintf("Allocated process with pid %d\n", np->pid);
   np->chan= (void *)0;
   np->killed= 0;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
+
+  // Set the child to return to forkret() with
+  // the SP we had at the start of sys_fork()
+  // and save a copy of the registers
+  np->context.pc= (uint)forkret;
+  np->context.sp= copysp;
+  saveregs(&(np->context));
+
+cprintf("Context at 0x%p, sp at 0x%p, pc at 0x%p\n",
+	&(np->context), &(np->context.sp), &(np->context.pc));
+
+cprintf("Saved SP 0x%p in the context\n", copysp);
 
 cprintf("Allocated %d frames at breg %d to %s\n",
 	np->nframes, np->basereg, np->name);
