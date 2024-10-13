@@ -108,6 +108,13 @@ Then, do a `make sdcard.img`. This creates the SD card image. The image has two
 partitions: the FAT partition has a bootable copy of the `xv6` kernel, and the
 second partition holds the `xv6` filesystem.
 
+## Status - 14 Oct 2024
+
+The PCBs have arrived and the CH375 device works fine. While waiting for the PCBs,
+I think I've got `fork()`, `exit()` and `wait()` working correctly in the emulator.
+There is now an `init` process. At present it forks a test program but soon I'll
+try to bring up a proper shell.
+
 ## Status - 1 Oct 2024
 
 I've imported the KiCad design for my expansion RAM + base register + CH375 board
