@@ -31,11 +31,6 @@ L1:	subq.l #1,D0
 	bne.s  L1
 	rts
 
-; Start the 100Hz heartbeat
-start_timer::
-    move.b  #$08,DUART_IMR	; Unmask counter interrupt
-    rts
-
 ; Increment the tick counter
 tick_handler::
     move.l D0,-(A7)		; Save D0
@@ -60,13 +55,12 @@ irq3_handler::
 
 ; Install the IRQ3, tick and system call handler,
 ; put a dummy value in the CH375_STATUS byte,
-; start the heartbeat and enable interrupts.
+; and enable interrupts.
 irq3_install::
 	move.l #irq3_handler,IRQ3_VECTOR
 	move.l #tick_handler,TICK_VECTOR
 	move.l #SYSCALL_HANDLER,TRAP11_VECTOR
 	move.b #$FF,CH375_STATUS
-	jsr    start_timer
 	and.w  #$F0FF,SR		; Enable all interrupts
 	rts
 
