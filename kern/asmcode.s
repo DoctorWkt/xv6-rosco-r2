@@ -178,7 +178,7 @@ swtch::
 ; The system call trap handler.
 ; D1 holds the system call number.
 SYSCALL_HANDLER::
-	cmp.l   #24,D1		; Is it a valid syscall number?
+	cmp.l   #25,D1		; Is it a valid syscall number?
 	bhi.s	.EPILOGUE	; No, so return now
 
 	move.l	$1C(A7),-(A7)	; Copy three original argument
@@ -206,7 +206,7 @@ SYSCALL_HANDLER::
 	dc.l	sys_fork	;  8 = fork
 	dc.l	sys_link	;  9 = link
 	dc.l	sys_unlink	; 10 = unlink
-	dc.l	sys_sbrk	; 11 = sys_sbrk
+	dc.l	sys_sbrk	; 11 = sbrk
 	dc.l	sys_chdir	; 12 = chdir
 	dc.l	sys_fstat	; 13 = fstat
 	dc.l	sys_dup		; 14 = dup
@@ -220,6 +220,7 @@ SYSCALL_HANDLER::
 	dc.l	sys_sleep	; 22 = sleep
 	dc.l	sys_fchdir	; 23 = fchdir
 	dc.l	sys_utime	; 24 = utime
+	dc.l	.NULLSYS	; 25 = pipe (soon)
 
 .NULLSYS:
 	rts

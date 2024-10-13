@@ -134,3 +134,8 @@ utime::
 	movem.l D1/A1,-(A7)		; Save two regs
 	move.l  #24,D1			; Syscall 24
 	jmp	do_syscall
+
+pipe::
+	movem.l D1/A1,-(A7)		; Save two regs
+	move.l  #25,D1			; Syscall 25
+	jmp	do_syscall
