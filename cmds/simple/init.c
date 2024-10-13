@@ -9,7 +9,7 @@
 #include <sys/wait.h>
 #include <cprintf.h>
 
-char *argv[] = { "/bin/fred", NULL };
+char *argv[] = { "/bin/sh", NULL };
 
 void main() {
   int pid, wpid;
@@ -27,9 +27,9 @@ void main() {
       exit(1);
     }
     if (pid == 0) {
-    cprintf("init: starting /bin/fred\n");
-      execv("/bin/fred", argv);
-      cprintf("init: exec /bin/fred failed\n");
+      cprintf("init: starting /bin/sh\n");
+      execv("/bin/sh", argv);
+      cprintf("init: exec /bin/sh failed\n");
       exit(1);
     }
     cprintf("Init parent, about to wait for any child\n");

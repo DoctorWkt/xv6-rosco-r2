@@ -1,406 +1,465 @@
+// Shell.
+
+#include <sys/types.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
-#include <cprintf.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <xv6/param.h>
-#include <dirent.h>
-#include <unistd.h>
+#include <sys/wait.h>
 #include <readline/readline.h>
 
-#define MAXARG 20		// Maximum number of arguments
-#define MAXLIN 100		// Maximum line size
+// Parsed command representation
+#define EXEC  1
+#define REDIR 2
+#define PIPE  3
+#define LIST  4
+#define BACK  5
 
-int realargc;			// Real argc after parsing the command
+#define MAXARGS 10
 
-// Return true if the name matches the given pattern.
-// Only ? and * are recognised. This code from Russ Cox:
-// https://research.swtch.com/glob
-int match(char *pattern, char *name) {
-  int px = 0, nx = 0;
-  int nextpx = 0, nextnx = 0;
-  int plen = strlen(pattern);
-  int nlen = strlen(name);
-  char c;
+struct cmd {
+  int type;
+};
 
-  for (; px < plen || nx < nlen;) {
-    if (px < plen) {
-      c = pattern[px];
+struct execcmd {
+  int type;
+  char *argv[MAXARGS];
+  char *eargv[MAXARGS];
+};
 
-      switch (c) {
-      case '?':		// Single character wildcard
-	if (nx < nlen) {
-	  px++;
-	  nx++;
-	  continue;
-	}
-	break;
+struct redircmd {
+  int type;
+  struct cmd *cmd;
+  char *file;
+  char *efile;
+  int mode;
+  int fd;
+};
 
-      case '*':		// Zero or more character wildcard
-	// Try to match at nx. If that
-	// doesn't work out, restart at
-	// nx+1 next.
-	nextpx = px;
-	nextnx = nx + 1;
-	px++;
-	continue;
+struct pipecmd {
+  int type;
+  struct cmd *left;
+  struct cmd *right;
+};
 
-      default:			// Ordinary character
-	if (nx < nlen && name[nx] == c) {
-	  px++;
-	  nx++;
-	  continue;
-	}
-      }
+struct listcmd {
+  int type;
+  struct cmd *left;
+  struct cmd *right;
+};
+
+struct backcmd {
+  int type;
+  struct cmd *cmd;
+};
+
+int fork1(void);		// Fork but panics on failure.
+void panic(char *);
+struct cmd *parsecmd(char *);
+
+// Execute cmd.  Never returns.
+void runcmd(struct cmd *cmd) {
+  char binbuf[100];
+  int p[2];
+  struct backcmd *bcmd;
+  struct execcmd *ecmd;
+  struct listcmd *lcmd;
+  struct pipecmd *pcmd;
+  struct redircmd *rcmd;
+
+  if (cmd == NULL)
+    exit(1);
+
+  switch (cmd->type) {
+  default:
+    panic("runcmd");
+
+  case EXEC:
+    ecmd = (struct execcmd *) cmd;
+    if (ecmd->argv[0] == NULL)
+      exit(1);
+    execv(ecmd->argv[0], ecmd->argv);
+
+    // The basic exec failed. Try exec'ing /bin/argv[0]
+    strcpy(binbuf, "/bin/");
+    strcpy(&binbuf[5], ecmd->argv[0]);
+    execv(binbuf, ecmd->argv);
+
+    fprintf(stderr, "exec %s failed\n", ecmd->argv[0]);
+    break;
+
+  case REDIR:
+    rcmd = (struct redircmd *) cmd;
+    close(rcmd->fd);
+    if (open(rcmd->file, rcmd->mode) < 0) {
+      fprintf(stderr, "open %s failed\n", rcmd->file);
+      exit(1);
     }
+    runcmd(rcmd->cmd);
+    break;
 
-    // Mismatch, maybe restart
-    if (0 < nextnx && nextnx <= nlen) {
-      px = nextpx;
-      nx = nextnx;
-      continue;
+  case LIST:
+    lcmd = (struct listcmd *) cmd;
+    if (fork1() == 0)
+      runcmd(lcmd->left);
+    wait(NULL);
+    runcmd(lcmd->right);
+    break;
+
+  case PIPE:
+    pcmd = (struct pipecmd *) cmd;
+    if (pipe(p) < 0)
+      panic("pipe");
+    if (fork1() == 0) {
+      close(1);
+      dup(p[1]);
+      close(p[0]);
+      close(p[1]);
+      runcmd(pcmd->left);
     }
-    return (0);
+    if (fork1() == 0) {
+      close(0);
+      dup(p[0]);
+      close(p[0]);
+      close(p[1]);
+      runcmd(pcmd->right);
+    }
+    close(p[0]);
+    close(p[1]);
+    wait(NULL);
+    wait(NULL);
+    break;
+
+  case BACK:
+    bcmd = (struct backcmd *) cmd;
+    if (fork1() == 0)
+      runcmd(bcmd->cmd);
+    break;
   }
-  // Matched all of pattern to all of name. Success.
-  return (1);
+  exit(1);
 }
 
-// Deal with redirections and pipelines in the current argv list
-void redirect(int argc, char *argv[]) {
-  // char seekbuf[MAXLIN];
+char historybuf[1024];
+
+int main(void) {
+  char *buf=NULL;
   int fd;
 
-  // Assume we won't have any redirection
-  realargc = argc;
-
-  // Walk the argument list and process redirections: <, >, >> and 2> only.
-  // We go to the 2nd-last argument so we can still process the next one.
-  for (int i = 0; i < argc - 1; i++) {
-
-    // Stdout redirected to a file
-    if (!strcmp(argv[i], ">")) {
-
-      // Open the file. 
-      if ((fd = open(argv[i + 1], O_CREAT | O_TRUNC | O_WRONLY)) == -1) {
-	cprintf("Cannot open %s\n", argv[i + 1]);
-	exit(1);
-      }
-
-      // Close stdout and dup the fd down to stdout, then close the fd
-      close(1);
-      dup(fd);
-      close(fd);
-
-      // Set the arg count to before this token. Skip the next token
-      if (realargc == argc)
-	realargc = i;
-      i++;
-    }
-
-    // Stdout redirected to a file, appending
-    if (!strcmp(argv[i], ">>")) {
-
-      // Open the file for reading and writing, so we can lseek on it.
-      if ((fd = open(argv[i + 1], O_WRONLY | O_APPEND)) == -1) {
-	cprintf("Cannot open %s\n", argv[i + 1]);
-	exit(1);
-      }
-
-      // Close stdout and dup the fd down to stdout, then close the fd
-      close(1);
-      dup(fd);
-      close(fd);
-
-      // Read to the end of the file
-      // while ((len=kread(1, seekbuf, MAXLIN))>0) ;
-
-      // Set the arg count to before this token. Skip the next token
-      if (realargc == argc)
-	realargc = i;
-      i++;
-    }
-
-    // Stdin redirected from a file
-    if (!strcmp(argv[i], "<")) {
-
-      // Open the file.
-      if ((fd = open(argv[i + 1], O_RDONLY)) == -1) {
-	cprintf("Cannot open %s\n", argv[i + 1]);
-	exit(1);
-      }
-
-      // Close stdin and dup the fd down to stdin, then close the fd
-      close(0);
-      dup(fd);
-      close(fd);
-
-      // Set the arg count to before this token. Skip the next token
-      if (realargc == argc)
-	realargc = i;
-      i++;
-    }
-
-    // Stderr redirected to a file
-    if (!strcmp(argv[i], "2>")) {
-
-      // Open the file.
-      if ((fd = open(argv[i + 1], O_CREAT | O_TRUNC | O_WRONLY)) == -1) {
-	cprintf("Cannot open %s\n", argv[i + 1]);
-	exit(1);
-      }
-
-      // Close stderr and dup the fd down to stderr, then close the fd
-      close(2);
-      dup(fd);
-      close(fd);
-
-      // Set the arg count to before this token. Skip the next token
-      if (realargc == argc)
-	realargc = i;
-      i++;
-    }
-
-    // A pipeline
-    if (!strcmp(argv[i], "|")) {
-
-      // Open a temporary file for the output of this command
-      if ((fd = open("/.pipedata", O_CREAT | O_TRUNC | O_WRONLY)) == -1) {
-	cprintf("Cannot open /.pipedata\n");
-	exit(1);
-      }
-
-      // Close stdout and dup the fd down to stdout, then close the fd
-      close(1);
-      dup(fd);
-      close(fd);
-
-      // Open a file to store the rest of the pipeline command
-      if ((fd = open("/.pipecmd", O_CREAT | O_TRUNC | O_WRONLY)) == -1) {
-	cprintf("Cannot open /.pipecmd\n");
-	exit(1);
-      }
-
-      // Set the arg count to before this token.
-      if (realargc == argc)
-	realargc = i;
-
-      // Write the rest of the pipeline command to the file
-      for (i = i + 1; i < argc; i++) {
-	write(fd, argv[i], strlen(argv[i]));
-	write(fd, " ", 1);
-      }
-
-      // Save the file and return now as there's nothing left to process
-      close(fd);
-      return;
-    }
-  }
-}
-
-// Parse the given line, generating argv
-int parse(char *buf, char *argv[]) {
-  int wordc;
-  char *wordlist[MAXARG + 1];	// List of words after metachar expansion
-  int argc = 0;
-  int end;
-  DIR *D;
-  struct dirent *dent;
-  char *cmdp = buf;
-
-  // Split the line up into non-whitespace arguments or operators
-  for (wordc = 0; wordc < MAXARG; wordc++) {
-
-    // Get an argument. If none left, break the loop
-    if ((wordlist[wordc] = strtok(cmdp, " \t\r\n")) == NULL)
-      break;
-
-    // Tell strtok to keep going
-    cmdp = NULL;
-  }
-
-  // No arguments, just restart the shell
-  if (wordc == 0)
-    exit(0);
-
-  // Copy the words into the argv list for now
-  for (int i = 0; i < wordc && argc < MAXARG; i++) {
-
-    // If the word starts with a single or double quote, trim off the
-    // characters at each end and add to the argv list
-    if ((wordlist[i][0] == '\'') || (wordlist[i][0] == '"')) {
-      end = strlen(wordlist[i]);
-      wordlist[i][end - 1] = 0;
-      argv[argc++] = &wordlist[i][1];
-      continue;
-    }
-
-    // See if the word contains a pattern to match on, i.e. a '*' or '?'
-    if ((index(wordlist[i], '?') != NULL)
-	|| (index(wordlist[i], '*') != NULL)) {
-
-      // For now we can only pattern match in this directory
-      if (index(wordlist[i], '/') != NULL) {
-	cprintf("Pattern matching only in this directory, sorry\n");
-	exit(1);
-      }
-
-      // Search the current directory for any matches
-      D = opendir(".");
-      if (D == NULL) {
-	cprintf("Can't opendir .\n");
-	exit(1);
-      }
-
-      // Process each entry
-      while ((dent = readdir(D)) != NULL) {
-
-	// Skip empty directory entries
-	if (dent->d_name[0] == '\0')
-	  continue;
-
-	// cprintf("About to match %s against %s\n", patternlist[i], dent->d_name);
-
-	// If there's a match, add the filename to the argv list
-	if (match(wordlist[i], dent->d_name)) {
-	  argv[argc++] = strdup(dent->d_name);
-	}
-      }
-      closedir(D);
-      free(D);
-      continue;
-    }
-
-    // Not a pattern or quoted word, add the word to the argv list
-    argv[argc++] = wordlist[i];
-  }
-
-  return (argc);
-}
-
-#if 0
-char readlinebuf[100];
-
-// For now
-char *readline(char *prompt) {
-  int i = 0;
-  char ch;
-
-  write(1, prompt, strlen(prompt));
-
+  // Read and run input commands.
+  rl_hinit(historybuf, 1024);
   while (1) {
-    read(0, &ch, 1);		// write(1, &ch, 1);
-    if (ch == '\n' || ch == '\r')
-      break;
+    // Free the buffer from the last readline
+    if (buf != NULL) free(buf);
 
-    if (i >= 98)
+    // Read in the line, continue if empty, break if EOF
+    buf= readline("$ ");
+    if (buf[0] == 0) continue;
+    if (buf == NULL) break;
+
+    // Do a cd command
+    if (buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' ') {
+      // Clumsy but will have to do for now.
+      // Chdir has no effect on the parent if run in the child.
+      buf[strlen(buf) - 1] = 0;	// chop \n
+      if (chdir(buf + 3) < 0)
+	fprintf(stderr, "cannot cd %s\n", buf + 3);
       continue;
-    readlinebuf[i++] = ch;
+    }
+    if (fork1() == 0)
+      runcmd(parsecmd(buf));
+    wait(NULL);
   }
-
-  readlinebuf[i] = 0;
-  return (readlinebuf);
+  exit(0);
 }
-#endif
 
-int main() {
-  int fd, datafd;
-  int argc;
-  char *buf = NULL;
-  char *argv[MAXARG + 1];	// The argument list
-  char binbuf[MAXLIN];		// Used to prepend "/bin/" to commands
+void panic(char *s) {
+  fprintf(stderr, "%s\n", s);
+  exit(1);
+}
 
-  // See if there is a pipe command that we need to process
-  fd = open("/.pipecmd", O_RDONLY);
-  if (fd != -1) {
-    // Yes there is. Check that we have pipe data
-    datafd = open("/.pipedata", O_RDONLY);
-    if (datafd == -1) {
-      cprintf("error: pipe command but no pipe data\n");
-      unlink("/.pipecmd");
-      exit(1);
+int fork1(void) {
+  int pid;
+
+  pid = fork();
+  if (pid == -1)
+    panic("fork");
+  return pid;
+}
+
+//PAGEBREAK!
+// Constructors
+
+struct cmd *execcmd(void) {
+  struct execcmd *cmd;
+
+  cmd = malloc(sizeof(*cmd));
+  memset(cmd, 0, sizeof(*cmd));
+  cmd->type = EXEC;
+  return (struct cmd *) cmd;
+}
+
+struct cmd *redircmd(struct cmd *subcmd, char *file, char *efile, int mode,
+		     int fd) {
+  struct redircmd *cmd;
+
+  cmd = malloc(sizeof(*cmd));
+  memset(cmd, 0, sizeof(*cmd));
+  cmd->type = REDIR;
+  cmd->cmd = subcmd;
+  cmd->file = file;
+  cmd->efile = efile;
+  cmd->mode = mode;
+  cmd->fd = fd;
+  return (struct cmd *) cmd;
+}
+
+struct cmd *pipecmd(struct cmd *left, struct cmd *right) {
+  struct pipecmd *cmd;
+
+  cmd = malloc(sizeof(*cmd));
+  memset(cmd, 0, sizeof(*cmd));
+  cmd->type = PIPE;
+  cmd->left = left;
+  cmd->right = right;
+  return (struct cmd *) cmd;
+}
+
+struct cmd *listcmd(struct cmd *left, struct cmd *right) {
+  struct listcmd *cmd;
+
+  cmd = malloc(sizeof(*cmd));
+  memset(cmd, 0, sizeof(*cmd));
+  cmd->type = LIST;
+  cmd->left = left;
+  cmd->right = right;
+  return (struct cmd *) cmd;
+}
+
+struct cmd *backcmd(struct cmd *subcmd) {
+  struct backcmd *cmd;
+
+  cmd = malloc(sizeof(*cmd));
+  memset(cmd, 0, sizeof(*cmd));
+  cmd->type = BACK;
+  cmd->cmd = subcmd;
+  return (struct cmd *) cmd;
+}
+
+//PAGEBREAK!
+// Parsing
+
+char whitespace[] = " \t\r\n\v";
+char symbols[] = "<|>&;()";
+
+int gettoken(char **ps, char *es, char **q, char **eq) {
+  char *s;
+  int ret;
+
+  s = *ps;
+  while (s < es && strchr(whitespace, *s))
+    s++;
+  if (q)
+    *q = s;
+  ret = *s;
+  switch (*s) {
+  case 0:
+    break;
+  case '|':
+  case '(':
+  case ')':
+  case ';':
+  case '&':
+  case '<':
+    s++;
+    break;
+  case '>':
+    s++;
+    if (*s == '>') {
+      ret = '+';
+      s++;
     }
+    break;
+  default:
+    ret = 'a';
+    while (s < es && !strchr(whitespace, *s) && !strchr(symbols, *s))
+      s++;
+    break;
+  }
+  if (eq)
+    *eq = s;
 
-    // Read in the command from the command file. NUL terminate it.
-    buf = (char *) malloc(MAXLIN);
-    if (buf == NULL) {
-      cprintf("malloc error\n");
-      exit(1);
+  while (s < es && strchr(whitespace, *s))
+    s++;
+  *ps = s;
+  return ret;
+}
+
+int peek(char **ps, char *es, char *toks) {
+  char *s;
+
+  s = *ps;
+  while (s < es && strchr(whitespace, *s))
+    s++;
+  *ps = s;
+  return *s && strchr(toks, *s);
+}
+
+struct cmd *parseline(char **, char *);
+struct cmd *parsepipe(char **, char *);
+struct cmd *parseexec(char **, char *);
+struct cmd *nulterminate(struct cmd *);
+
+struct cmd *parsecmd(char *s) {
+  char *es;
+  struct cmd *cmd;
+
+  es = s + strlen(s);
+  cmd = parseline(&s, es);
+  peek(&s, es, "");
+  if (s != es) {
+    fprintf(stderr, "leftovers: %s\n", s);
+    panic("syntax");
+  }
+  nulterminate(cmd);
+  return cmd;
+}
+
+struct cmd *parseline(char **ps, char *es) {
+  struct cmd *cmd;
+
+  cmd = parsepipe(ps, es);
+  while (peek(ps, es, "&")) {
+    gettoken(ps, es, 0, 0);
+    cmd = backcmd(cmd);
+  }
+  if (peek(ps, es, ";")) {
+    gettoken(ps, es, 0, 0);
+    cmd = listcmd(cmd, parseline(ps, es));
+  }
+  return cmd;
+}
+
+struct cmd *parsepipe(char **ps, char *es) {
+  struct cmd *cmd;
+
+  cmd = parseexec(ps, es);
+  if (peek(ps, es, "|")) {
+    gettoken(ps, es, 0, 0);
+    cmd = pipecmd(cmd, parsepipe(ps, es));
+  }
+  return cmd;
+}
+
+struct cmd *parseredirs(struct cmd *cmd, char **ps, char *es) {
+  int tok;
+  char *q, *eq;
+
+  while (peek(ps, es, "<>")) {
+    tok = gettoken(ps, es, 0, 0);
+    if (gettoken(ps, es, &q, &eq) != 'a')
+      panic("missing file for redirection");
+    switch (tok) {
+    case '<':
+      cmd = redircmd(cmd, q, eq, O_RDONLY, 0);
+      break;
+    case '>':
+      cmd = redircmd(cmd, q, eq, O_WRONLY | O_CREAT | O_TRUNC, 1);
+      break;
+    case '+':			// >>
+      cmd = redircmd(cmd, q, eq, O_WRONLY | O_CREAT | O_APPEND, 1);
+      break;
     }
-
-    int cnt = read(fd, buf, MAXLIN);
-    close(fd);
-    buf[cnt] = 0;
-
-    // Dup the pipe data to be stdin
-    close(0);
-    dup(datafd);
-    close(datafd);
-
-    // Now unlink both pipe files so they can be reused
-    unlink("/.pipecmd");
-    unlink("/.pipedata");
   }
+  return cmd;
+}
 
-  // Use readline() to get the input line if there is no pipeline command
-  if (buf == NULL) {
-    buf = readline("$ ");
+struct cmd *parseblock(char **ps, char *es) {
+  struct cmd *cmd;
+
+  if (!peek(ps, es, "("))
+    panic("parseblock");
+  gettoken(ps, es, 0, 0);
+  cmd = parseline(ps, es);
+  if (!peek(ps, es, ")"))
+    panic("syntax - missing )");
+  gettoken(ps, es, 0, 0);
+  cmd = parseredirs(cmd, ps, es);
+  return cmd;
+}
+
+struct cmd *parseexec(char **ps, char *es) {
+  char *q, *eq;
+  int tok, argc;
+  struct execcmd *cmd;
+  struct cmd *ret;
+
+  if (peek(ps, es, "("))
+    return parseblock(ps, es);
+
+  ret = execcmd();
+  cmd = (struct execcmd *) ret;
+
+  argc = 0;
+  ret = parseredirs(ret, ps, es);
+  while (!peek(ps, es, "|)&;")) {
+    if ((tok = gettoken(ps, es, &q, &eq)) == 0)
+      break;
+    if (tok != 'a')
+      panic("syntax");
+    cmd->argv[argc] = q;
+    cmd->eargv[argc] = eq;
+    argc++;
+    if (argc >= MAXARGS)
+      panic("too many args");
+    ret = parseredirs(ret, ps, es);
   }
+  cmd->argv[argc] = 0;
+  cmd->eargv[argc] = 0;
+  return ret;
+}
 
-  // Parse the input line, generating argv
-  argc = parse(buf, argv);
+// NUL-terminate all the counted strings.
+struct cmd *nulterminate(struct cmd *cmd) {
+  int i;
+  struct backcmd *bcmd;
+  struct execcmd *ecmd;
+  struct listcmd *lcmd;
+  struct pipecmd *pcmd;
+  struct redircmd *rcmd;
 
-  // See if the first argument is cd. If so, do the chdir and
-  // then exit() which will re-exec the shell!
-  if (!strcmp(argv[0], "cd")) {
-    if (argc == 2) {
-      if (chdir(argv[1]) == -1)
-	cprintf("Cannot cd to %s\n", argv[1]);
-    }
-    exit(0);
+  if (cmd == 0)
+    return 0;
+
+  switch (cmd->type) {
+  case EXEC:
+    ecmd = (struct execcmd *) cmd;
+    for (i = 0; ecmd->argv[i]; i++)
+      *ecmd->eargv[i] = 0;
+    break;
+
+  case REDIR:
+    rcmd = (struct redircmd *) cmd;
+    nulterminate(rcmd->cmd);
+    *rcmd->efile = 0;
+    break;
+
+  case PIPE:
+    pcmd = (struct pipecmd *) cmd;
+    nulterminate(pcmd->left);
+    nulterminate(pcmd->right);
+    break;
+
+  case LIST:
+    lcmd = (struct listcmd *) cmd;
+    nulterminate(lcmd->left);
+    nulterminate(lcmd->right);
+    break;
+
+  case BACK:
+    bcmd = (struct backcmd *) cmd;
+    nulterminate(bcmd->cmd);
+    break;
   }
-
-  // Try to open the argument.
-  if ((fd = open(argv[0], O_RDONLY)) == -1) {
-    // No such luck. Try putting "/bin/" on the front
-    strcpy(binbuf, "/bin/");
-    strcat(binbuf, argv[0]);
-    if ((fd = open(binbuf, O_RDONLY)) == -1) {
-      cprintf("%s: no such command\n", argv[0]);
-      exit(0);
-    }
-    argv[0] = binbuf;
-  }
-
-#if 0
-  // See if it's an executable: always start with 0x3406
-  kread(fd, &i, 2);
-  if (i != 0x3406) {
-    cprintf("%s: not an executable\n", argv[0]);
-    close(fd);
-    exit(0);
-  }
-#endif
-  close(fd);
-
-  // Deal with any redirections
-  redirect(argc, argv);
-
-  // No arguments, exit
-  if (argc == 0)
-    exit(0);
-
-  // Put a NULL at the end of the argv[] array
-  argv[realargc] = NULL;
-
-#if 0
-  // Debug
-  cprintf("sh argc %d\n", realargc);
-  for (i = 0; i < realargc; i++)
-    cprintf("sh argv[%d] %s 0x%x\n", i, argv[i], argv[i]);
-#endif
-
-  // Now exec the new program
-  execv(argv[0], argv);
-  exit(0);			// Restart ourselves if the exec() failed
+  return cmd;
 }
