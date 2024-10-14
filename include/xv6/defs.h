@@ -17,6 +17,8 @@ void send_ch375_cmd(unsigned char cmd);
 void send_ch375_data(unsigned char cmd);
 unsigned char read_ch375_data(void);
 unsigned char get_ch375_status(void);
+unsigned char read_block(unsigned char *buf, uint lba);
+unsigned char write_block(unsigned char *buf, uint lba);
 void setbasereg(int val);
 void cli();
 void sti();

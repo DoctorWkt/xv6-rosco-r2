@@ -4,7 +4,25 @@ CHDATAWR  equ	$FFF001
 CHCMDWR   equ	$FFF003
 
 ; CH375 Commands
-CMD_GET_STATUS  equ  $22
+CMD_RESET_ALL           equ $05
+CMD_SET_USB_MODE        equ $15
+CMD_GET_STATUS		equ $22
+CMD_RD_USB_DATA         equ $28
+CMD_WR_USB_DATA         equ $2B
+CMD_DISK_INIT           equ $51
+CMD_DISK_SIZE           equ $53
+CMD_DISK_READ           equ $54
+CMD_DISK_RD_GO          equ $55
+CMD_DISK_WRITE          equ $56
+CMD_DISK_WR_GO          equ $57
+CMD_DISK_READY          equ $59
+
+; CH375 Status Results
+USB_INT_SUCCESS         equ $14
+USB_INT_CONNECT         equ $15
+USB_INT_DISCONNECT      equ $16
+USB_INT_DISK_READ       equ $1D
+USB_INT_DISK_WRITE      equ $1E
 
 ; UART I/O addresses
 DUART_SRA equ   $F00003
@@ -94,9 +112,151 @@ read_ch375_data::
 	rts
 
 ; Get the CH375 status from the
-; CH375_STATUS memory location
+; CH375_STATUS memory location.
+; Loop until it is not $FF
 get_ch375_status::
-	move.b CH375_STATUS,D0
+        move.b CH375_STATUS,D0
+        cmpi.b #$FF,D0
+        beq    get_ch375_status
+        rts
+
+; Given a pointer to a 512-byte buffer and an
+; LBA number, read the block from the CH375 into
+; the buffer. Return 1 on success, 0 otherwise.
+;
+; unsigned char read_block(unsigned char *buf, uint lba)
+;
+read_block::
+
+	; Check that buf isn't NULL
+	movea.l	4(SP),A0
+	cmp.l	#0,4(SP)
+	beq.w	readfail
+
+	; Send the disk read command followed by the LBA
+	; in little-endian format, then ask for one block.
+	move.b	#$FF,CH375_STATUS
+	move.b	#CMD_DISK_READ,CHCMDWR
+	move.b	11(SP),CHDATAWR
+	move.b	10(SP),CHDATAWR
+	move.b	9(SP),CHDATAWR
+	move.b	8(SP),CHDATAWR
+	move.b	#1,CHDATAWR
+
+	; Loop eight times reading in
+	; 64 bytes of data each time.
+	moveq.l	#8,D1
+READL1:
+
+	; Get the status, ensure that
+	; it is USB_INT_DISK_READ
+	jsr	get_ch375_status
+	cmpi.b	#USB_INT_DISK_READ,D0
+	bne.s	readfail
+
+	; Send the command to read the data,
+	; get back the number of bytes to read
+	move.b	#$FF,CH375_STATUS
+	move.b	#CMD_RD_USB_DATA,CHCMDWR
+	clr.l	D0
+	move.b	CHDATARD,D0
+
+	; Loop cnt times reading data
+READL2:
+	move.b  CHDATARD,(A0)+
+	subi.l	#1,D0
+	bne.s	READL2
+
+	; After cnt bytes, tell the CH375
+	; to get the next set of data
+	; and loop back
+	move.b	#$FF,CH375_STATUS
+	move.b	#CMD_DISK_RD_GO,CHCMDWR
+	subi.l	#1,D1
+	bne.s	READL1
+
+	; Get the status after reading the block
+	jsr	get_ch375_status
+	cmpi.b	#USB_INT_SUCCESS,D0
+	bne.s	readfail
+
+	; Return 1 on success, 0 on failure
+readok:
+	moveq.l	#1,d0
+	rts
+
+readfail:
+	moveq.l	#0,d0
+	rts
+
+; Given a pointer to a 512-byte buffer and an
+; LBA number, write the block from the buffer
+; to the CH375. Return 1 on success, 0 otherwise.
+;
+; unsigned char write_block(unsigned char *buf, uint lba)
+;
+write_block::
+
+	; Check that buf isn't NULL
+	movea.l	4(SP),A0
+	cmp.l	#0,4(SP)
+	beq.w	writefail
+
+	; Send the disk write command followed by the LBA in
+	; little-endian format, then ask to send one block.
+	move.b	#$FF,CH375_STATUS
+	move.b	#CMD_DISK_WRITE,CHCMDWR
+	move.b	11(SP),CHDATAWR
+	move.b	10(SP),CHDATAWR
+	move.b	9(SP),CHDATAWR
+	move.b	8(SP),CHDATAWR
+	move.b	#1,CHDATAWR
+
+	; Loop eight times writing out
+	; 64 bytes of data each time.
+	moveq.l	#8,D1
+WRITEL1:
+
+	; Get the status, ensure that
+	; it is USB_INT_DISK_WRITE
+	jsr	get_ch375_status
+	cmpi.b	#USB_INT_DISK_WRITE,D0
+	bne.s	writefail
+
+	; Send the command to write the data
+	; along with the count. Then set D0
+	; to 64 for the loop.
+	move.b	#$FF,CH375_STATUS
+	move.b	#CMD_WR_USB_DATA,CHCMDWR
+	move.b	#64,CHDATAWR
+	moveq.l	#64,D0
+
+	; Loop 64 times writing data
+WRITEL2:
+	move.b  (A0)+,CHDATAWR
+	subi.l	#1,D0
+	bne.s	WRITEL2
+
+	; After 64 bytes, tell the CH375 to
+	; get ready for the next set of data
+	; and loop back
+	move.b	#$FF,CH375_STATUS
+	move.b	#CMD_DISK_WR_GO,CHCMDWR
+	subi.l	#1,D1
+	bne.s	WRITEL1
+
+	; Get the status after writing the block
+	jsr	get_ch375_status
+	cmpi.b	#USB_INT_SUCCESS,D0
+	bne.s	writefail
+
+	; Return 1 on success, 0 on failure
+writeok:
+	moveq.l	#1,d0
+	rts
+
+writefail:
+	moveq.l	#0,d0
 	rts
 
 ; Print byte to UART A.
