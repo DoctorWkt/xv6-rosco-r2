@@ -155,14 +155,25 @@ READL1:
 	bne.s	readfail
 
 	; Send the command to read the data,
-	; get back the number of bytes to read
+	; get back the number of bytes to read.
+ 	; Divide it by eight to match the loop
+	; unrolling below (this assumes the count
+	; is a multiple of eight).
 	move.b	#$FF,CH375_STATUS
 	move.b	#CMD_RD_USB_DATA,CHCMDWR
 	clr.l	D0
 	move.b	CHDATARD,D0
+	lsr.l	#3,D0
 
 	; Loop cnt times reading data
 READL2:
+	move.b  CHDATARD,(A0)+
+	move.b  CHDATARD,(A0)+
+	move.b  CHDATARD,(A0)+
+	move.b  CHDATARD,(A0)+
+	move.b  CHDATARD,(A0)+
+	move.b  CHDATARD,(A0)+
+	move.b  CHDATARD,(A0)+
 	move.b  CHDATARD,(A0)+
 	subi.l	#1,D0
 	bne.s	READL2
@@ -225,14 +236,22 @@ WRITEL1:
 
 	; Send the command to write the data
 	; along with the count. Then set D0
-	; to 64 for the loop.
+	; to 8 for the loop: it really is 64
+	; but we do loop unrolling.
 	move.b	#$FF,CH375_STATUS
 	move.b	#CMD_WR_USB_DATA,CHCMDWR
 	move.b	#64,CHDATAWR
-	moveq.l	#64,D0
+	moveq.l	#8,D0
 
-	; Loop 64 times writing data
+	; Loop 8 times writing data
 WRITEL2:
+	move.b  (A0)+,CHDATAWR
+	move.b  (A0)+,CHDATAWR
+	move.b  (A0)+,CHDATAWR
+	move.b  (A0)+,CHDATAWR
+	move.b  (A0)+,CHDATAWR
+	move.b  (A0)+,CHDATAWR
+	move.b  (A0)+,CHDATAWR
 	move.b  (A0)+,CHDATAWR
 	subi.l	#1,D0
 	bne.s	WRITEL2
