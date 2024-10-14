@@ -30,69 +30,11 @@ There are two Git branches for this project:
 
  - `main` has the code that supports the SD card. In this version, there is only
    one program running at any time.
- - `ch375` has the code that supports the above expansion board. In this version,
-   the system will have multiple processes running at any time. As at early Oct 2024
+ - This branch, `ch375`, has the code that supports the above expansion board.
+   In this version, the system has multiple processes running at any time.
    this is a work in progress.
 
-## Running the SD Version
-
-You will find a Zip file at the top-level, `sd-img.zip`. Unzip this to extract
-the `sdcard.img` file: this is an SD card image. Write this, block for block, onto
-an SD card, e.g.
-
-```
-$ cat sdcard.img > /dev/sdc              or
-$ dd if=sdcard.img of=/dev/sdc bs=1M
-```
-
-(Can someone tell me how to do this under MacOS and Windows, thanks!)
-
-Now insert the SD card into your Rosco m68k Classic v2 SBC and boot the system.
-You should see something like:
-
-```
-                                 ___ ___ _   
- ___ ___ ___ ___ ___       _____|  _| . | |_ 
-|  _| . |_ -|  _| . |     |     | . | . | '_|
-|_| |___|___|___|___|_____|_|_|_|___|__|_,_|
-                    |_____|  Classic 2.50.DEV
-
-MC68020 CPU @ 10MHz with 1048576 bytes RAM
-Initializing hard drives... No IDE interface found
-Searching for boot media...
-  Partition 1: Loading "/ROSCODE1.BIN"...
-Loaded 12080 bytes in ~1 sec.
-
-Welcome to xv6
-About to initialise the SD card
-SD card xv6 partition at 0x9000
-xv6 superblock: size 1000 nblocks 961 ninodes 200
-  nlog 10 logstart 2 inodestart 12 bmap start 38
-$
-```
-
-You can then do stuff like:
-
-```
-$ ls -l
--rwxrwxrwx     1 root root     46 Thu Jan  1 00:00:00 README
-drwxrwxrwx     1 root root    176 Thu Jan  1 00:00:00 bin
-drwxrwxrwx     1 root root     64 Thu Jan  1 00:00:00 etc
--rwxrwxrwx     1 root root   6071 Thu Jan  1 00:00:00 roff_manual
-$ ls -l bin
--rwxrwxrwx     1 root root  46096 Thu Jan  1 00:00:00 cal
--rwxrwxrwx     1 root root  28524 Thu Jan  1 00:00:00 cat
--rwxrwxrwx     1 root root  17024 Thu Jan  1 00:00:00 echo
--rwxrwxrwx     1 root root  17604 Thu Jan  1 00:00:00 fopen
--rwxrwxrwx     1 root root  17024 Thu Jan  1 00:00:00 fred
--rwxrwxrwx     1 root root  38952 Thu Jan  1 00:00:00 ls
--rwxrwxrwx     1 root root  17024 Thu Jan  1 00:00:00 rm
--rwxrwxrwx     1 root root  17872 Thu Jan  1 00:00:00 sh
--rwxrwxrwx     1 root root  27968 Thu Jan  1 00:00:00 usertests
-$
-```
-
-## Building the System
+## Building the System for the CH375 Device
 
 I need to put more docs here, but for now ...
 
@@ -105,16 +47,58 @@ the commands. This will build the `fs.img` xv6 filesystem image.
 
 Yes, there are a heap of warnings. Over time, I will try to fix them.
 
-Then, do a `make sdcard.img`. This creates the SD card image. The image has two
-partitions: the FAT partition has a bootable copy of the `xv6` kernel, and the
-second partition holds the `xv6` filesystem.
+Then, do a `make sdcard.img`. This creates the SD card image with a bootable copy
+of the `xv6` kernel.
+
+Now write `sdcard.img` to your SD card, write `fs.img` to your USB key, put each
+in the correct socket, and boot your rosco board with the CH375 expansion board.
+
+You should see something like:
+
+```
+                                 ___ ___ _   
+ ___ ___ ___ ___ ___       _____|  _| . | |_ 
+|  _| . |_ -|  _| . |     |     | . | . | '_|
+|_| |___|___|___|___|_____|_|_|_|___|___|_,_|
+                    |_____|      Classic 2.42
+
+MC68010 CPU @ 10.0MHz with 14680064 bytes RAM
+Initializing hard drives... No IDE interface found
+Searching for boot media...
+SD v2 card:
+  Partition 1: Loading "/ROSCODE1.BIN"....
+Loaded 16600 bytes in ~1 sec.
+
+Welcome to xv6
+About to initialise the CH375
+xv6 superblock: size 9000 nblocks 8949 ninodes 200
+  nlog 20 logstart 2 inodestart 22 bmap start 48
+$ setdate
+Enter new date (yyyy-mm-dd): 2024-10-14
+Enter new time (hh:mm:ss): 11:07:00
+New time is Mon Oct 14 11:07:00 2024
+
+$ touch README
+$ ls -l
+-rwxrwxrwx     1 root root     46 Mon Oct 14 11:07:05 README
+-rwxrwxrwx     1 root root  42497 Thu Jan  1 00:01:13 bar
+drwxrwxrwx     1 root root    896 Mon Oct 14 00:49:48 bin
+drwxrwxrwx     1 root root     64 Wed Sep  4 23:27:09 etc
+-rwxrwxrwx     1 root root  42497 Thu Jan  1 00:00:43 foo
+-rwxrwxrwx     1 root root   6071 Tue Aug  8 01:30:40 roff_manual
+$
+```
 
 ## Status - 14 Oct 2024
 
 The PCBs have arrived and the CH375 device works fine. While waiting for the PCBs,
-I think I've got `fork()`, `exit()` and `wait()` working correctly in the emulator.
-There is now an `init` process. At present it forks a test program but soon I'll
-try to bring up a proper shell.
+I got `fork()`, `exit()` and `wait()` working correctly in the emulator. They also
+work in hardware with the memory on the PCB.
+
+There is now an `init` process, and I've imported the `xv6` shell. So now the system
+has proper working processes.
+
+I've made a start with the code for `pipe()` but it's not working yet.
 
 ## Status - 5 Oct 2024
 
