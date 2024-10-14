@@ -28,11 +28,36 @@ USB interface. It has a
 
 There are two Git branches for this project:
 
- - `main` has the code that supports the SD card. In this version, there is only
-   one program running at any time.
  - This branch, `ch375`, has the code that supports the above expansion board.
    In this version, the system has multiple processes running at any time.
-   this is a work in progress.
+ - The `main` branch has the code that supports the SD card. In that version,
+   there is only one program running at any time.
+
+## Running the System in an Emulator
+
+If you want to try this out without the hardware, then build my
+[r68k emulator](https://github.com/DoctorWkt/rosco_m68k/tree/wkt_r68k/code/tools/r68k).
+
+In this repository, I have provided a copy of the `xv6` kernel binary: `kern/xv6.bin`, and a filesystem image: `fs.img`. Copy these to where you built the emulator. Now you can do:
+
+```
+$ ./r68k -U fs.img xv6.bin
+```
+
+and you will see:
+
+```
+Welcome to xv6
+About to initialise the CH375
+xv6 superblock: size 9000 nblocks 8949 ninodes 200
+  nlog 20 logstart 2 inodestart 22 bmap start 48
+$ ls -l
+-rwxrwxrwx     1 root root     46 Wed Sep  4 23:49:10 README
+drwxrwxrwx     1 root root    896 Mon Oct 14 21:38:24 bin
+drwxrwxrwx     1 root root     64 Wed Sep  4 23:27:09 etc
+-rwxrwxrwx     1 root root   6071 Tue Aug  8 01:30:40 roff_manual
+$
+```
 
 ## Building the System for the CH375 Device
 
