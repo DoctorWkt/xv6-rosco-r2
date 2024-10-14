@@ -149,9 +149,6 @@ int main(void) {
   // Read and run input commands.
   rl_hinit(historybuf, 1024);
   while (1) {
-    // Free the buffer from the last readline
-    if (buf != NULL) free(buf);
-
     // Read in the line, continue if empty, break if EOF
     buf= readline("$ ");
     if (buf[0] == 0) continue;
@@ -159,9 +156,6 @@ int main(void) {
 
     // Do a cd command
     if (buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' ') {
-      // Clumsy but will have to do for now.
-      // Chdir has no effect on the parent if run in the child.
-      buf[strlen(buf) - 1] = 0;	// chop \n
       if (chdir(buf + 3) < 0)
 	fprintf(stderr, "cannot cd %s\n", buf + 3);
       continue;
