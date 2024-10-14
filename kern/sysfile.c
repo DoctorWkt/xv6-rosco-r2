@@ -467,6 +467,33 @@ int sys_fchdir(int fd) {
   return(ichdir(f->ip));
 }
 
+int sys_pipe(int *fd)
+{
+  struct file *rf, *wf;
+  int fd0, fd1;
+
+  if (fd==NULL) {
+    set_errno(EINVAL);
+    return(-1);
+  }
+  if(pipealloc(&rf, &wf) < 0) {
+    set_errno(EMFILE);
+    return(-1);
+  }
+  fd0 = -1;
+  if((fd0 = fdalloc(rf)) < 0 || (fd1 = fdalloc(wf)) < 0){
+    if(fd0 >= 0)
+      proc->ofile[fd0] = 0;
+    fileclose(rf);
+    fileclose(wf);
+    set_errno(ENFILE);
+    return(-1);
+  }
+  fd[0] = fd0;
+  fd[1] = fd1;
+  return(0);
+}
+
 // lseek code derived from https://github.com/ctdk/xv6
 int sys_lseek(int fd, int offset, int base) {
   int newoff=0;

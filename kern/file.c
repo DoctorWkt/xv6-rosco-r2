@@ -7,6 +7,8 @@
 #include <xv6/param.h>
 #include <xv6/fs.h>
 #include <xv6/file.h>
+#include <xv6/stat.h>
+#include <errno.h>
 
 struct {
   struct file file[NFILE];
@@ -57,7 +59,9 @@ fileclose(struct file *f)
   f->ref = 0;
   f->type = FD_NONE;
 
-  if(ff.type == FD_INODE){
+  if(ff.type == FD_PIPE)
+    pipeclose(ff.pipe, ff.writable);
+  else if(ff.type == FD_INODE){
     begin_op();
     iput(ff.ip);
     end_op();
@@ -74,6 +78,13 @@ filestat(struct file *f, struct xvstat *st)
     iunlock(f->ip);
     return 0;
   }
+  if(f->type == FD_PIPE){
+    memset(st, 0, sizeof(*st));
+    st->type= T_PIPE;
+    st->size= PIPESIZE;
+    return 0;
+  }
+  set_errno(ENOENT);
   return -1;
 }
 
@@ -85,6 +96,8 @@ fileread(struct file *f, char *addr, int n)
 
   if(f->readable == 0)
     return -1;
+  if(f->type == FD_PIPE)
+    return piperead(f->pipe, addr, n);
   if(f->type == FD_INODE){
     ilock(f->ip);
     if((r = readi(f->ip, addr, f->off, n)) > 0)
@@ -105,6 +118,8 @@ filewrite(struct file *f, char *addr, int n)
 
   if(f->writable == 0)
     return -1;
+  if(f->type == FD_PIPE)
+    return pipewrite(f->pipe, addr, n);
   if(f->type == FD_INODE){
     // write a few blocks at a time to avoid exceeding
     // the maximum log transaction size, including

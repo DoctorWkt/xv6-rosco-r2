@@ -21,18 +21,15 @@ void main() {
 
   while (1) {
     pid = fork();
-    cprintf("In init, fork() returned %d\n", pid);
     if (pid < 0) {
       cprintf("init: fork failed\n");
       exit(1);
     }
     if (pid == 0) {
-      cprintf("init: starting /bin/sh\n");
       execv("/bin/sh", argv);
       cprintf("init: exec /bin/sh failed\n");
       exit(1);
     }
-    cprintf("Init parent, about to wait for any child\n");
     while ((wpid = wait(NULL)) >= 0 && wpid != pid);	// Clean up zombies
   }
 }

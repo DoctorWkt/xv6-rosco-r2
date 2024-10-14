@@ -91,6 +91,15 @@ void            log_write(struct buf*);
 void            begin_op();
 void            end_op();
 
+// pipe.c
+void pipeinit(void);
+struct pipe *palloc(void);
+void pfree(struct pipe *p);
+int pipealloc(struct file **f0, struct file **f1);
+void pipeclose(struct pipe *p, int writable);
+int pipewrite(struct pipe *p, char *addr, int n);
+int piperead(struct pipe *p, char *addr, int n);
+
 // proc.c
 void		pinit(void);
 void		userinit(void);

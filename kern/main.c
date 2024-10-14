@@ -30,6 +30,7 @@ void kmain()
   initlog();	   // Block logging
   pinit();	   // Process table
   finit();	   // Free frame list
+  pipeinit();	   // Pipe list
 
   // Eventually this will initialise the first program.
   // For now, it sets up the working directory.
