@@ -114,16 +114,18 @@ drwxrwxrwx     1 root root     64 Wed Sep  4 23:27:09 etc
 $
 ```
 
-## Status - 14 Oct 2024
+## Status - 15 Oct 2024
 
 The PCBs have arrived and the CH375 device works fine. While waiting for the PCBs,
 I got `fork()`, `exit()` and `wait()` working correctly in the emulator. They also
 work in hardware with the memory on the PCB.
 
 There is now an `init` process, and I've imported the `xv6` shell. So now the system
-has proper working processes.
+has working processes. Pipes are also working, so you can now do:
 
-I've made a start with the code for `pipe()` but it's not working yet.
+```
+$ roff roff_manual | less
+```
 
 ## Status - 5 Oct 2024
 
