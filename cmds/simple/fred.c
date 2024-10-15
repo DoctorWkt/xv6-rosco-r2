@@ -1,30 +1,36 @@
 #include <sys/types.h>
 #include <stdio.h>
-#include <termios.h>
+#include <string.h>
 #include <unistd.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <sys/wait.h>
 #include <cprintf.h>
 
-// fork test
+char *message= "Hello there\n";
+char buf[100];
+
+// pipe test
 
 void main() {
-  int pid;
-  int status= 45;
+  int pipefd[2];
+  int result;
 
-  cprintf("In /bin/fred, about to fork()\n");
-  pid= fork();
-  switch (pid) {
-    case -1: cprintf("fork failed!\n"); break;
-    case 0:  cprintf("In the child\n"); exit(3);
-    default: cprintf("In the parent, waiting for child pid %d statusptr %p\n",
-		pid, &status);
-	     pid= wait(&status);
-	     cprintf("Back from wait, got pid %d status %d ptr %p\n",
-			pid, status, &status);
-	     while (1) ;
-  }
+  // Get the pipe fds
 
+  result= pipe(pipefd);
+  cprintf("Did pipe(), got %d\n", result);
+  if (result!=0) exit(1);
+
+  // Writing down the pipe, include the EOS
+  result= write(pipefd[1], message, strlen(message)+1);
+  cprintf("Did write(), got %d\n", result);
+  if (result<1) exit(1);
+
+  // Reading from the file
+  result= read(pipefd[0], buf, 100);
+  cprintf("Did read(), got %d\n", result);
+  if (result<1) exit(1);
+
+  cprintf("%s\n", buf);
   exit(0);
 }

@@ -399,7 +399,7 @@ SYSCALL_HANDLER::
 	dc.l	sys_sleep	; 22 = sleep
 	dc.l	sys_fchdir	; 23 = fchdir
 	dc.l	sys_utime	; 24 = utime
-	dc.l	.NULLSYS	; 25 = pipe (soon)
+	dc.l	sys_pipe	; 25 = pipe
 
 .NULLSYS:
 	rts
