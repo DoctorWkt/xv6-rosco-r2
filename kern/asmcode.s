@@ -295,7 +295,9 @@ consgetc::
 	beq.s   .BUSYLOOP	; a character.
 	move.b  DUART_RBA,D0	; Get it into D0
 
-    	cmpi.b	#13,D0		; Is it CR?
+	cmp.b	#1,DUART_CRNL_A	; Do we need to deal with CR?
+	bne.s	L3		; No
+    	cmpi.b	#13,D0		; Is the character a CR?
 	bne.s	L3		; No
 	move.b	#10,D0		; Yes, convert to LF (newline)
 

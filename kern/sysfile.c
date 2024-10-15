@@ -538,6 +538,7 @@ int sys_lseek(int fd, int offset, int base) {
 }
 
 extern char DUART_ECHO_A;
+extern char DUART_CRNL_A;
 
 // For now, only console operations
 int sys_ioctl (int fd, unsigned long op, void *arg) {
@@ -558,21 +559,19 @@ int sys_ioctl (int fd, unsigned long op, void *arg) {
     case TCGETA:
       t= (struct termios *)arg;
       if (t==NULL) return(-1);
-      if (DUART_ECHO_A==1)
-      	t->c_lflag = ECHO | ICANON;
-      else
-      	t->c_lflag = ICANON;
+      t->c_lflag= 0;
+      if (DUART_ECHO_A==1) t->c_lflag |= ECHO;
+      if (DUART_CRNL_A==1) t->c_lflag |= ICANON;
       return(0);
 
     case TCSETA:
       t= (struct termios *)arg;
       if (t==NULL) return(-1);
 
-      // Enable or disable echoing
-      if (t->c_lflag & ECHO)
-	DUART_ECHO_A= 1;
-      else
-	DUART_ECHO_A= 0;
+      // Enable or disable echoing and CR -> NL
+      DUART_ECHO_A= 0; DUART_CRNL_A= 0;
+      if (t->c_lflag & ECHO) DUART_ECHO_A= 1;
+      if (t->c_lflag & ICANON) DUART_CRNL_A= 1;
       return(0);
   }
   set_errno(EINVAL);

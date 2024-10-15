@@ -182,10 +182,10 @@ void k_flip()
 {
   struct termios T;
   if (k_raw==0) {
-    T.c_lflag= 0;			// No echo
+    T.c_lflag= 0;			// No echo nor CR->NL
     k_raw=1;
   } else {
-    T.c_lflag= ECHO;			// Yes echo
+    T.c_lflag= ECHO|ICANON;		// Yes echo and CR->NL
     k_raw=0;
   }
   tcsetattr(0, 0, &T);
