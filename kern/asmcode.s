@@ -359,7 +359,7 @@ swtch::
 ; The system call trap handler.
 ; D1 holds the system call number.
 SYSCALL_HANDLER::
-	cmp.l   #25,D1		; Is it a valid syscall number?
+	cmp.l   #26,D1		; Is it a valid syscall number?
 	bhi.s	.EPILOGUE	; No, so return now
 
 	move.l	$1C(A7),-(A7)	; Copy three original argument
@@ -402,6 +402,7 @@ SYSCALL_HANDLER::
 	dc.l	sys_fchdir	; 23 = fchdir
 	dc.l	sys_utime	; 24 = utime
 	dc.l	sys_pipe	; 25 = pipe
+	dc.l	sys_getpid	; 26 = getpid
 
 .NULLSYS:
 	rts

@@ -111,6 +111,7 @@ void		wakeup(void *chan);
 int		kill(int pid);
 void		sys_exit(int exitvalue);
 int		sys_wait(int *statusptr);
+int		sys_getpid();
 
 // string.c
 #ifndef USE_NATIVE_STRINGS

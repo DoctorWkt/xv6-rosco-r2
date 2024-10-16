@@ -414,3 +414,7 @@ void *sys_sbrk(int increment) {
   } else
     return((void *)prevbrk);
 }
+
+int sys_getpid() {
+  return(proc->pid);
+}

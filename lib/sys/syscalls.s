@@ -139,3 +139,8 @@ pipe::
 	movem.l D1/A1,-(A7)		; Save two regs
 	move.l  #25,D1			; Syscall 25
 	jmp	do_syscall
+
+getpid::
+	movem.l D1/A1,-(A7)		; Save two regs
+	move.l  #26,D1			; Syscall 26
+	jmp	do_syscall

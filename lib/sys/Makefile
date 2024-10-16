@@ -4,7 +4,8 @@ CFLAGS+= -g
 
 OBJS = crt0.o syscalls.o kinit.o cprintf.o misc.o \
 	opendir.o isatty.o stat.o getenv.o gettimeofday.o \
-	tcgetattr.o access.o getpwent.o
+	tcgetattr.o access.o getpwent.o waitpid.o \
+	rename.o
 
 all: $(OBJS)
 
