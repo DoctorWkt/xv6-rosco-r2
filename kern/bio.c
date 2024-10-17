@@ -65,10 +65,22 @@ bget(uint blockno)
   }
 
   // Not cached; recycle an unused buffer.
+  // Try to find a clean buffer first.
+  for(b = bcache.head.prev; b != &bcache.head; b = b->prev){
+    if(b->refcnt == 0 && (b->flags & B_DIRTY) == 0) {
+      b->blockno = blockno;
+      b->flags = 0;
+      b->refcnt = 1;
+      return b;
+    }
+  }
+
+  // No clean buffers, so try to find an unused dirty buffer.
   // Even if refcnt==0, B_DIRTY indicates a buffer is in use
   // because log.c has modified it but not yet committed it.
   for(b = bcache.head.prev; b != &bcache.head; b = b->prev){
-    if(b->refcnt == 0 && (b->flags & B_DIRTY) == 0) {
+    if(b->refcnt == 0) {
+      blkrw(b);
       b->blockno = blockno;
       b->flags = 0;
       b->refcnt = 1;
@@ -97,7 +109,12 @@ void
 bwrite(struct buf *b)
 {
   b->flags |= B_DIRTY;
-  blkrw(b);
+
+  // The code used to write the block out.
+  // Now we leave it in memory marked dirty,
+  // and rely on the user to run 'sync' to
+  // flush out the dirty blocks.
+  // blkrw(b);
 }
 
 // Release a locked buffer.
@@ -115,4 +132,14 @@ brelse(struct buf *b)
     bcache.head.next->prev = b;
     bcache.head.next = b;
   }
+}
+
+// Flush all dirty buffers out to the disk
+void bflush(void) {
+  struct buf *b;
+  for (b = bcache.buf; b < bcache.buf+NBUF; b++)
+    if (b->flags & B_DIRTY) {
+      // cprintf("Flushing block %d\n", b->blockno);
+      blkrw(b);
+    }
 }

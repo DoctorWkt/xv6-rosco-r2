@@ -603,3 +603,11 @@ int sys_utime(const char *path, const struct utimbuf *timbuf) {
   end_op();
   return(0);
 }
+
+// Sync the disk. Return when all
+// dirty blocks have been written out.
+void sys_sync(void) {
+  begin_op();
+  bflush();
+  end_op();
+}

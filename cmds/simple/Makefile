@@ -11,7 +11,7 @@ LDLIBS= -lc -lgcc
 BINS= banner basename cal cat chmem cksum cmp comm cp crc cut date dd du \
       dirname echo ed expand fgrep fopen fred grep hd head init less ln ls \
       mkdir more mv od pwd rev rm rmdir roff sed setdate size sh sleep \
-      sort split tail tar tee touch tr uniq usertests wc foo
+      sort split sync tail tar tee touch tr uniq usertests wc foo
 
 # Lose the implicit compilation rule
 %: %.c

@@ -35,6 +35,7 @@ void            binit(void);
 struct buf*     bread(uint);
 void            brelse(struct buf*);
 void            bwrite(struct buf*);
+void		bflush(void);
 
 // clock.c
 long sys_time(long *tloc);
@@ -145,6 +146,7 @@ int		sys_mkdir(char *path);
 int		sys_chdir(char *path);
 int		sys_fchdir(int fd);
 int		sys_lseek(int fd, int offset, int base);
+void		sys_sync(void);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
