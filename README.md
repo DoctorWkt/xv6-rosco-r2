@@ -114,6 +114,16 @@ drwxrwxrwx     1 root root     64 Wed Sep  4 23:27:09 etc
 $
 ```
 
+## Status - 17 Oct 2024
+
+I found a workaround for the problem with the `vi` editor writing files really
+slowly, but I haven't found the underlying bug yet.
+
+**BIG CHANGE**: I modified the disk block buffer to _not_ write out dirty blocks,
+and added the `sync` program and `sync()` system call to flush out dirty blocks.
+This improves disk performance, but you must remember to `sync` before turning off
+the system now!
+
 ## Status - 15 Oct 2024
 
 The PCBs have arrived and the CH375 device works fine. While waiting for the PCBs,
