@@ -1,7 +1,7 @@
 #include <xv6/types.h>
 #include <xv6/defs.h>
 
-#if 1
+#if 0
 void *memset(void *dst, int c, uint n) {
   if (n != 0) {
     char *d = dst;
