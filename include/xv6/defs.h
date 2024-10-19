@@ -114,7 +114,7 @@ void		sys_exit(int exitvalue);
 int		sys_wait(int *statusptr);
 int		sys_getpid();
 
-// string.c
+// string.c, memmove.s, memset.s
 #ifndef USE_NATIVE_STRINGS
 int             memcmp(const void*, const void*, uint);
 void*           memmove(void*, const void*, uint);

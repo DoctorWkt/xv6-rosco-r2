@@ -1,5 +1,7 @@
 #include <xv6/types.h>
+#include <xv6/defs.h>
 
+#if 1
 void *memset(void *dst, int c, uint n) {
   if (n != 0) {
     char *d = dst;
@@ -10,6 +12,7 @@ void *memset(void *dst, int c, uint n) {
   }
   return (dst);
 }
+#endif
 
 int memcmp(const void *v1, const void *v2, uint n) {
   const uchar *s1, *s2;
@@ -25,6 +28,7 @@ int memcmp(const void *v1, const void *v2, uint n) {
   return 0;
 }
 
+#if 0
 void *memmove(void *dst, const void *src, uint n) {
   const char *s;
   char *d;
@@ -42,6 +46,7 @@ void *memmove(void *dst, const void *src, uint n) {
 
   return dst;
 }
+#endif
 
 // memcpy exists to placate GCC.  Use memmove.
 void *memcpy(void *dst, const void *src, uint n) {
