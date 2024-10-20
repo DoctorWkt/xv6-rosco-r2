@@ -46,6 +46,7 @@ bzero(int bno)
 }
 
 // Blocks.
+static uint lastballoc=0;
 
 // Allocate a zeroed disk block.
 static uint
@@ -54,20 +55,37 @@ balloc(void)
   uint b, bi, m;
   struct buf *bp;
 
+  // Loop starting at the last bitmap block
+  // where we allocated a free block
   bp = 0;
-  for(b = 0; b < sb.size; b += BPB){
+  b= lastballoc;
+  while (1) {
     bp = bread(BBLOCK(b, sb));
     for(bi = 0; bi < BPB && b + bi < sb.size; bi++){
+
+      // Loop back if this byte represents
+      // no free blocks
+      if (bp->data[bi/8] == 0xff) continue;
+
       m = 1 << (bi % 8);
       if((bp->data[bi/8] & m) == 0){  // Is block free?
         bp->data[bi/8] |= (uchar)m;  // Mark block in use.
         log_write(bp);
         brelse(bp);
         bzero(b + bi);
+	lastballoc= b;
         return b + bi;
       }
     }
     brelse(bp);
+
+    // Move up to the next bitmap block.
+    // Loop back to zero if we exceed the
+    // disk size and stop if we get back
+    // to lastballoc.
+    b += BPB;
+    if (b >= sb.size) b= 0;
+    if (b== lastballoc) break;
   }
   panic("balloc: out of blocks");
   return(0);	// Keep -Wall happy

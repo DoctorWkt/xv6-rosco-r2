@@ -5,8 +5,8 @@
 #define NPIPE        50			// maximum number of active pipes
 #define PIPESIZE     512		// number of bytes in an empty pipe
 #define MAXOPBLOCKS  10			// max # of blocks any FS op writes
-#define LOGSIZE      20			// max data blocks in on-disk log
-#define NBUF         100		// size of disk block cache
+#define LOGSIZE      100		// max data blocks in on-disk log
+#define NBUF         400		// size of disk block cache
 #define FSSIZE       9000		// size of file system in blocks
 
 #define MAXARGS	     100		// Maximum # command-line arguments
