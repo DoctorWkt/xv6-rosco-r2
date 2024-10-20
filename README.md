@@ -114,6 +114,13 @@ drwxrwxrwx     1 root root     64 Wed Sep  4 23:27:09 etc
 $
 ```
 
+## Status - 21 Oct 2024
+
+I've imported some assembly language versions of `memmove()` and `memset()`.
+I've also rewritten some of the loops in the `balloc()` block allocation
+function. All of this has greatly improved the file I/O speed, especially
+writes to disk.
+
 ## Status - 17 Oct 2024
 
 I found a workaround for the problem with the `vi` editor writing files really
