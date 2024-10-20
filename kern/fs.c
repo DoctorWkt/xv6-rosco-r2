@@ -47,6 +47,7 @@ bzero(int bno)
 
 // Blocks.
 static uint lastballoc=0;
+static uint lastbi=0;
 
 // Allocate a zeroed disk block.
 static uint
@@ -60,12 +61,17 @@ balloc(void)
   bp = 0;
   b= lastballoc;
   while (1) {
+
     bp = bread(BBLOCK(b, sb));
-    for(bi = 0; bi < BPB && b + bi < sb.size; bi++){
+
+    // Loop starting at the last position in
+    // the bitmap where we allocated a free block
+    bi= lastbi;
+    while (1) {
 
       // Loop back if this byte represents
       // no free blocks
-      if (bp->data[bi/8] == 0xff) continue;
+      if (bp->data[bi/8] == 0xff) goto nextbi;	// Yuk a goto, sorry!
 
       m = 1 << (bi % 8);
       if((bp->data[bi/8] & m) == 0){  // Is block free?
@@ -74,8 +80,17 @@ balloc(void)
         brelse(bp);
         bzero(b + bi);
 	lastballoc= b;
+	lastbi= bi;
         return b + bi;
       }
+nextbi:
+      // Move up to the next index. Go back
+      // to zero if we either exceed the disk
+      // size of the bytes per block. Stop
+      // looping when we get back to the lastbi.
+      bi++;
+      if (bi >= BPB || b + bi >= sb.size) bi= 0;
+      if (bi == lastbi) break;
     }
     brelse(bp);
 
