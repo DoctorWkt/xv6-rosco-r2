@@ -114,6 +114,11 @@ drwxrwxrwx     1 root root     64 Wed Sep  4 23:27:09 etc
 $
 ```
 
+## Status -- 22 Oct 2024
+
+I've added double-indirect blocks to the filesystem. Files can
+now be up to 32 Megabytes in size.
+
 ## Status - 21 Oct 2024
 
 I've imported some assembly language versions of `memmove()` and `memset()`.
