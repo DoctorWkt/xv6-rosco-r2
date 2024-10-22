@@ -34,7 +34,7 @@ readsb(struct superblock *sb)
 }
 
 // Zero a block.
-void
+static void
 bzero(int bno)
 {
   struct buf *bp;
@@ -50,7 +50,7 @@ static uint lastballoc=0;
 static uint lastbi=0;
 
 // Allocate a zeroed disk block.
-uint
+static uint
 balloc(void)
 {
   uint b, bi, m;
@@ -107,7 +107,7 @@ nextbi:
 }
 
 // Free a disk block.
-void
+static void
 bfree(uint b)
 {
   struct buf *bp;
@@ -262,7 +262,7 @@ iupdate(struct inode *ip)
 // Find the inode with number inum
 // and return the in-memory copy. Does not lock
 // the inode and does not read it from disk.
-struct inode*
+static struct inode*
 iget(uint inum)
 {
   struct inode *ip, *empty;
@@ -377,7 +377,7 @@ iunlockput(struct inode *ip)
 
 // Return the disk block address of the nth block in inode ip.
 // If there is no such block, bmap allocates one.
-uint
+static uint
 bmap(struct inode *ip, uint bn)
 {
   uint addr, *a;
@@ -394,7 +394,7 @@ bmap(struct inode *ip, uint bn)
   // direct blocks
   bn -= NDIRECT;
 
-  if(bn < NINDIRECT){
+  if(bn < (NINDIRECT*NINDIRECT)){
     // Load the singly-indirect block, allocating if necessary.
     if((addr = ip->addrs[NDIRECT]) == 0)
       ip->addrs[NDIRECT] = addr = balloc();
@@ -410,6 +410,7 @@ bmap(struct inode *ip, uint bn)
     // Load the doubly-indirect block
     brelse(bp);
     bp = bread(addr);
+    a = (uint*)bp->data;
 
     // Load the block using the address in
     // the doubly-indirect block
