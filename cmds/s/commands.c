@@ -612,7 +612,11 @@ char *file;
 	/* write the lines */
 	while (from <= to) {
 		b_gets(from++, text);
-		fprintf(fp, "%s\n", text);
+		// fprintf(fp, "%s\n", text); // XXX stdio has a bug in which
+					      // now and then it writes single
+					      // bytes using write()
+		fputs(text, fp);
+		fputs("\n", fp);
 	}
 	fclose(fp);
 	sprintf(text, "%s: %d line%s", file, count, (count == 1) ? "" : "s");
