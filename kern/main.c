@@ -14,6 +14,7 @@ char CH375_STATUS= 0;
 // Should we echo characters on DUART A?
 // 1 means yes, 0 means no.
 char DUART_ECHO_A= 1;
+char DUART_CRNL_A= 1;
 
 // Our variables
 static char *argv[]= { "/bin/sh" };

@@ -1,4 +1,5 @@
 #include <xv6/types.h>
+#include <xv6/defs.h>
 
 #if 0
 void *memset(void *dst, int c, uint n) {
