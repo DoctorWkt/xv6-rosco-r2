@@ -19,6 +19,7 @@ void            binit(void);
 struct buf*     bread(uint);
 void            brelse(struct buf*);
 void            bwrite(struct buf*);
+void		bflush(void);
 
 // clock.c
 long sys_time(long *tloc);

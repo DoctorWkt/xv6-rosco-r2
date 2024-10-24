@@ -114,3 +114,8 @@ utime::
 	movem.l D1/A1,-(A7)		; Save two regs
 	move.l  #24,D1			; Syscall 24
 	jmp	do_syscall
+
+sync::
+	movem.l D1/A1,-(A7)		; Save two regs
+	move.l  #27,D1			; Syscall 27
+	jmp     do_syscall
