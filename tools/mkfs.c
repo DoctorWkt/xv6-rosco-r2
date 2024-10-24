@@ -134,9 +134,8 @@ int main(int argc, char *argv[]) {
   nativesb.inodestart = 2 + nlog;
   nativesb.bmapstart = 2 + nlog + ninodeblocks;
 
-  printf
-    ("nmeta %d (boot, super, log blocks %u inode blocks %u, bitmap blocks %u)\n"
-     "blocks %d total %d\n",
+  printf("nmeta %d (boot, super, log blocks %u, inode blocks %u, "
+	 "bitmap blocks %u)\nblocks %d total %d\n",
      nmeta, nlog, ninodeblocks, nbitmap, nblocks, FSSIZE);
 #ifdef BIG_ENDIAN_CPU
   printf("big endian\n");
@@ -181,7 +180,7 @@ int main(int argc, char *argv[]) {
 
 // Write a sector to the image
 void wsect(uint sec, void *buf) {
-// printf("In wsect block 0x%x offset 0x%x\n", sec, sec * 512);
+// printf("In wsect block %d offset %d\n", sec, sec * 512);
   if (lseek(fsfd, sec * BSIZE, 0) != sec * BSIZE) {
     perror("lseek");
     exit(1);
@@ -249,13 +248,13 @@ void balloc(int used) {
   uchar buf[BSIZE];
   int i;
 
-  printf("balloc: first %d blocks have been allocated\n", used);
+  // printf("balloc: first %d blocks have been allocated\n", used);
   assert(used < BSIZE * 8);
   memset(buf, 0, BSIZE);
   for (i = 0; i < used; i++) {
     buf[i / 8] = buf[i / 8] | (0x1 << (i % 8));
   }
-  printf("balloc: write bitmap block at sector %d\n", nativesb.bmapstart);
+  // printf("balloc: write bitmap block at sector %d\n", nativesb.bmapstart);
   wsect(nativesb.bmapstart, buf);
 }
 
@@ -269,11 +268,11 @@ void iappend(uint inum, void *xp, int n) {
   struct dinode din;
   char buf[BSIZE];
   xvblk_t indirect[NINDIRECT];
+  xvblk_t indirect2[NINDIRECT];    // for the doubly indirect blocks
   uint x;
 
   rinode(inum, &din);
   off = xint(din.size);
-//printf("append inum %d at off %d sz %d\n", inum, off, n);
   while (n > 0) {
     fbn = off / BSIZE;
     assert(fbn < MAXFILE);
@@ -284,22 +283,32 @@ void iappend(uint inum, void *xp, int n) {
       x = xint(din.addrs[fbn]);
     } else {
       if (xint(din.addrs[NDIRECT]) == 0) {
-// printf("Allocating block 0x%x as indirect block\n", freeblock);
 	din.addrs[NDIRECT] = xint(freeblock++);
       }
+
       rsect(xint(din.addrs[NDIRECT]), (char *) indirect);
-      if (indirect[fbn - NDIRECT] == 0) {
-// printf("Allocating block 0x%x as indirect storage\n", freeblock);
-	indirect[fbn - NDIRECT] = xint(freeblock++);
+
+      // First indirect block
+      if (indirect[(fbn - NDIRECT) / NINDIRECT] == 0) {
+	indirect[(fbn - NDIRECT) / NINDIRECT] = xint(freeblock++);
 	wsect(xint(din.addrs[NDIRECT]), (char *) indirect);
       }
-      x = xint(indirect[fbn - NDIRECT]);
-// printf("Allocating block 0x%x for file storage\n", x);
+
+
+      // Second indirect block
+      rsect(xint(indirect[(fbn - NDIRECT) / NINDIRECT]), (char *) indirect2);
+      if (indirect2[(fbn - NDIRECT) % NINDIRECT] == 0) {
+        indirect2[(fbn - NDIRECT) % NINDIRECT] = xint(freeblock++);
+        wsect(xint(indirect[(fbn - NDIRECT) / NINDIRECT]), (char *) indirect2);
+      }
+
+      // x is the address of the block to be written
+      // so it should correspond to the doubly indirect addr
+      x = xint(indirect2[(fbn - NDIRECT) % NINDIRECT]);
     }
     n1 = min(n, (fbn + 1) * BSIZE - off);
     rsect(x, buf);
     bcopy(p, buf + off - (fbn * BSIZE), n1);
-// printf("Writing block 0x%x\n", x);
     wsect(x, buf);
     n -= n1;
     off += n1;

@@ -371,13 +371,12 @@ iunlockput(struct inode *ip)
   iput(ip);
 }
 
-//PAGEBREAK!
 // Inode content
 //
 // The content (data) associated with each inode is stored
 // in blocks on the disk. The first NDIRECT block numbers
-// are listed in ip->addrs[].  The next NINDIRECT blocks are
-// listed in block ip->addrs[NDIRECT].
+// are listed in ip->addrs[]. The doubly-indirect blocks
+// are listed in blocks pointed to by ip->addrs[NDIRECT].
 
 // Return the disk block address of the nth block in inode ip.
 // If there is no such block, bmap allocates one.
@@ -392,16 +391,34 @@ bmap(struct inode *ip, uint bn)
       ip->addrs[bn] = addr = balloc();
     return addr;
   }
+
+  // It's a block listed in an indirect block.
+  // To make it easier, subtract the number of
+  // direct blocks
   bn -= NDIRECT;
 
-  if(bn < NINDIRECT){
-    // Load indirect block, allocating if necessary.
+  if(bn < (NINDIRECT*NINDIRECT)){
+    // Load the singly-indirect block, allocating if necessary.
     if((addr = ip->addrs[NDIRECT]) == 0)
       ip->addrs[NDIRECT] = addr = balloc();
     bp = bread(addr);
     a = (uint*)bp->data;
-    if((addr = a[bn]) == 0){
-      a[bn] = addr = balloc();
+
+    // See if there is a doubly-indirect block
+    if((addr = a[bn/(NINDIRECT)]) == 0){
+      a[(bn/NINDIRECT)] = addr = balloc();
+      log_write(bp);
+    }
+
+    // Load the doubly-indirect block
+    brelse(bp);
+    bp = bread(addr);
+    a = (uint*)bp->data;
+
+    // Load the block using the address in
+    // the doubly-indirect block
+    if((addr = a[bn%(NINDIRECT)]) == 0){
+      a[(bn%NINDIRECT)] = addr = balloc();
       log_write(bp);
     }
     brelse(bp);
@@ -421,9 +438,10 @@ void itrunc(struct inode *ip)
 {
   int i;
   uint j;
-  struct buf *bp;
-  uint *a;
+  struct buf *bp, *bp2;
+  uint *a, *a2;
 
+  // Free the direct blocks first
   for(i = 0; i < NDIRECT; i++){
     if(ip->addrs[i]){
       bfree(ip->addrs[i]);
@@ -431,15 +449,26 @@ void itrunc(struct inode *ip)
     }
   }
 
+  // There are some doubly-indirect blocks to free
   if(ip->addrs[NDIRECT]){
     bp = bread(ip->addrs[NDIRECT]);
     a = (uint*)bp->data;
     for(j = 0; j < NINDIRECT; j++){
-      if(a[j])
-        bfree(a[j]);
+      if(a[j]) {
+	// The indirect blocks pointed to by
+	// a[j] must be freed first
+        bp2 = bread(a[j]);
+        a2 = (uint*)bp2->data;
+        for(int y = 0; y < NINDIRECT; y++){
+          if(a2[y])
+            bfree(a2[y]);
+        }
+        brelse(bp2);
+        bfree(a[j]);	// and free the second indirect block
+      }
     }
     brelse(bp);
-    bfree(ip->addrs[NDIRECT]);
+    bfree(ip->addrs[NDIRECT]);	// free the top indirect block last
     ip->addrs[NDIRECT] = 0;
   }
 
