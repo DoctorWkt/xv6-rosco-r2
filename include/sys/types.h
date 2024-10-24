@@ -31,7 +31,6 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)types.h	7.17 (Berkeley) 5/6/91
- *	$Id: types.h,v 1.1 2024/09/03 02:21:22 wkt Exp wkt $
  */
 
 #ifndef _TYPES_H_
