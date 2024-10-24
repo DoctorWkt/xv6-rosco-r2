@@ -28,10 +28,10 @@ USB interface. It has a
 
 There will be two Git branches for this project:
 
- - `main` has the code that supports the SD card. In this version, there is only
-   one program running at any time.
- - `ch375` has the code that supports the above expansion board. In this version,
-   the system can have multiple processes running at any time.
+ - This branch, `main`, has the code that supports the SD card. In this version,
+   there is only one program running at any time.
+ - The `ch375` branch has the code that supports the above expansion board. In that
+   version, the system can have multiple processes running at any time.
 
 ## Running the SD Version
 
@@ -108,18 +108,10 @@ Then, do a `make sdcard.img`. This creates the SD card image. The image has two
 partitions: the FAT partition has a bootable copy of the `xv6` kernel, and the
 second partition holds the `xv6` filesystem.
 
-## Status - 14 Oct 2024
+## Status - 24 Oct 2024
 
-The PCBs have arrived and the CH375 device works fine. While waiting for the PCBs,
-I think I've got `fork()`, `exit()` and `wait()` working correctly in the emulator.
-There is now an `init` process. At present it forks a test program but soon I'll
-try to bring up a proper shell.
-
-## Status - 1 Oct 2024
-
-I've imported the KiCad design for my expansion RAM + base register + CH375 board
-and done a bit of documentation on it. I've ordered PCBs and I'm waiting for them
-to arrive so I can test if the board works.
+I've imported a lot of the changes from the `ch375` branch that improve the
+speed of file I/O. Things are a lot snappier now!
 
 ## Status - 24 Sept 2024
 

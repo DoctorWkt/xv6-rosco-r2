@@ -8,7 +8,7 @@
 #include <errno.h>
 
 #define MAX_RAM		(1024 * 1024)	// 1M of RAM
-#define START_ADDR	0x18000
+#define START_ADDR	0x40000
 
 // We use variables that are not on the stack
 // to ensure that they are not tromped when
@@ -103,10 +103,11 @@ void sys_spawn(int argc, char *argv[]) {
   sys_close(spawn_fd);
 
   // Set the stack pointer to point at the argc on the stack
-  // and jump to the first instruction in the program
+  // and jump to the first instruction in the program.
+  // 0x40000 should be START_ADDR
   __asm__ (
 	"    move.l %[temp],%%sp\n"
-	"    jmp 0x18000\n"
+	"    jmp 0x40000\n"		
 	: [temp] "+d"(spawn_lowptr));
 }
 
