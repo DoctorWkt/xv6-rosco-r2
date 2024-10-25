@@ -17,3 +17,4 @@ GCCLIBDIR= $(HOMEBREW_CELLAR)/gcc-cross-m68k@13/13.3.0/lib/gcc/m68k-elf/13.3.0/m
 LIBDIR= $(TOP_SRCDIR)/lib
 
 RANLIB= m68k-elf-ranlib
+AR= m68k-elf-ar

@@ -13,18 +13,18 @@ libc.a:
 	(cd regex; make)
 	(cd regexp; make)
 	(cd sys; make)
-	ar vr libc.a gen/*.o stdio/*.o stdlib/*.o string/*.o \
+	$(AR) vr libc.a gen/*.o stdio/*.o stdlib/*.o string/*.o \
 		locale/*.o other/*.o regex/*.o regexp/*.o sys/*.o
 	$(RANLIB) libc.a
 
 libtermcap.a:
 	(cd libterm; make)
-	ar vr libtermcap.a libterm/*.o
+	$(AR) vr libtermcap.a libterm/*.o
 	$(RANLIB) libtermcap.a
 
 libcurses.a:
 	make -C libcurses all
-	ar vr libcurses.a libcurses/*.o
+	$(AR) vr libcurses.a libcurses/*.o
 	$(RANLIB) libcurses.a
 
 clean:
