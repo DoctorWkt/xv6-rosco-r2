@@ -1,3 +1,6 @@
+TOP_SRCDIR = ..
+include $(TOP_SRCDIR)/Makefile.common
+
 all: libc.a libtermcap.a libcurses.a
 
 libc.a:
@@ -12,17 +15,17 @@ libc.a:
 	(cd sys; make)
 	ar vr libc.a gen/*.o stdio/*.o stdlib/*.o string/*.o \
 		locale/*.o other/*.o regex/*.o regexp/*.o sys/*.o
-	ranlib libc.a
+	$(RANLIB) libc.a
 
 libtermcap.a:
 	(cd libterm; make)
 	ar vr libtermcap.a libterm/*.o
-	ranlib libtermcap.a
+	$(RANLIB) libtermcap.a
 
 libcurses.a:
 	make -C libcurses all
 	ar vr libcurses.a libcurses/*.o
-	ranlib libcurses.a
+	$(RANLIB) libcurses.a
 
 clean:
 	(cd sys; make clean)
