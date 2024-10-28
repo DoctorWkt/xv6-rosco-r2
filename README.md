@@ -114,6 +114,12 @@ drwxrwxrwx     1 root root     64 Wed Sep  4 23:27:09 etc
 $
 ```
 
+## Status -- 29 Oct 2024
+
+I've decided to replace the BSD libraries and commands with
+the libraries and commands from Minix. There are now a lot 
+more commands, and the libraries are smaller too.
+
 ## Status -- 22 Oct 2024
 
 I've added double-indirect blocks to the filesystem. Files can
