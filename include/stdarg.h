@@ -31,7 +31,6 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)stdarg.h	7.2 (Berkeley) 5/4/91
- *	$Id: stdarg.h,v 1.1 2024/09/09 02:49:32 wkt Exp wkt $
  */
 
 #ifndef _MACHINE_STDARG_H_

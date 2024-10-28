@@ -5,7 +5,8 @@
 #include <errno.h>
 #include <xv6/types.h>
 #include <xv6/stat.h>
-#include <xv6/defs.h>
+
+int		sys_fstat(int fd, struct xvstat *st);
 
 // Perform an xv6 fstat and fill in the fields that xv6 doesn't have
 int fstat(int fd, struct stat *statbuf) {
