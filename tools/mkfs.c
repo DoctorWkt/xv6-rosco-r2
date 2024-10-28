@@ -174,7 +174,6 @@ int main(int argc, char *argv[]) {
 
   // Mark the in-use blocks in the free block list
   balloc(freeblock);
-
   exit(0);
 }
 
@@ -246,16 +245,32 @@ uint ialloc(ushort type, int mtime) {
 // Update the free block list by marking some blocks as in-use
 void balloc(int used) {
   uchar buf[BSIZE];
+  int blocknum= nativesb.bmapstart;
   int i;
 
   // printf("balloc: first %d blocks have been allocated\n", used);
-  assert(used < BSIZE * 8);
-  memset(buf, 0, BSIZE);
-  for (i = 0; i < used; i++) {
-    buf[i / 8] = buf[i / 8] | (0x1 << (i % 8));
+  assert(used < nblocks);
+
+  // Loop setting the bits in the bitmap for these blocks
+  while (1) {
+    // All bits in this block are set
+    if (used >= BSIZE * 8) {
+      memset(buf, 1, BSIZE);
+      // printf("balloc: write bitmap block at sector %d\n", blocknum);
+      wsect(blocknum++, buf);
+      used -= BSIZE * 8;
+      continue;
+    }
+
+    // Some bits not set, so do it all by hand
+    memset(buf, 0, BSIZE);
+    for (i = 0; i < used; i++) {
+      buf[i / 8] = buf[i / 8] | (0x1 << (i % 8));
+    }
+    // printf("balloc: write bitmap block at sector %d\n", blocknum);
+    wsect(blocknum, buf);
+    break;
   }
-  // printf("balloc: write bitmap block at sector %d\n", nativesb.bmapstart);
-  wsect(nativesb.bmapstart, buf);
 }
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
