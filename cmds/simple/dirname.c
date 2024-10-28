@@ -1,3 +1,4 @@
+#include <sys/types.h>
 #include <string.h>
 #include <unistd.h>
 #define STDIN_FILENO   0
@@ -20,7 +21,7 @@ int main(int argc, char *argv[])
 
     if (argc == 2) {
 	strip_trailing_slashes(argv[1]);
-	line = rindex(argv[1], '/');
+	line = strrchr(argv[1], '/');
 	if (line == NULL) {
 	    line = ".";
 	} else {

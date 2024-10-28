@@ -1,153 +1,115 @@
-/*
- * Copyright (c) 1982, 1986, 1989 Regents of the University of California.
- * All rights reserved.
+/* The <errno.h> header defines the numbers of the various errors that can
+ * occur during program execution.  They are visible to user programs and 
+ * should be small positive integers.  However, they are also used within 
+ * MINIX, where they must be negative.  For example, the READ system call is 
+ * executed internally by calling do_read().  This function returns either a 
+ * (negative) error number or a (positive) number of bytes actually read.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
+ * To solve the problem of having the error numbers be negative inside the
+ * the system and positive outside, the following mechanism is used.  All the
+ * definitions are are the form:
  *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ *	#define EPERM		(_SIGN 1)
  *
- *	from: @(#)errno.h	7.13 (Berkeley) 2/19/91
+ * If the macro _SYSTEM is defined, then  _SIGN is set to "-", otherwise it is
+ * set to "".  Thus when compiling the operating system, the  macro _SYSTEM
+ * will be defined, setting EPERM to (- 1), whereas when when this
+ * file is included in an ordinary user program, EPERM has the value ( 1).
  */
 
-#ifndef KERNEL
-extern int errno;			/* global error number */
+#ifndef _ERRNO_H		/* check if <errno.h> is already included */
+#define _ERRNO_H		/* it is not included; note that fact */
+
+/* Now define _SIGN as "" or "-" depending on _SYSTEM. */
+#ifdef _SYSTEM
+#   define _SIGN         -
+#   define OK            0
+#else
+#   define _SIGN         
 #endif
 
-#define	EPERM		1		/* Operation not permitted */
-#define	ENOENT		2		/* No such file or directory */
-#define	ESRCH		3		/* No such process */
-#define	EINTR		4		/* Interrupted system call */
-#define	EIO		5		/* Input/output error */
-#define	ENXIO		6		/* Device not configured */
-#define	E2BIG		7		/* Argument list too long */
-#define	ENOEXEC		8		/* Exec format error */
-#define	EBADF		9		/* Bad file descriptor */
-#define	ECHILD		10		/* No child processes */
-#define	EDEADLK		11		/* Resource deadlock avoided */
-					/* 11 was EAGAIN */
-#define	ENOMEM		12		/* Cannot allocate memory */
-#define	EACCES		13		/* Permission denied */
-#define	EFAULT		14		/* Bad address */
-#ifndef _POSIX_SOURCE
-#define	ENOTBLK		15		/* Block device required */
-#define	EBUSY		16		/* Device busy */
-#endif
-#define	EEXIST		17		/* File exists */
-#define	EXDEV		18		/* Cross-device link */
-#define	ENODEV		19		/* Operation not supported by device */
-#define	ENOTDIR		20		/* Not a directory */
-#define	EISDIR		21		/* Is a directory */
-#define	EINVAL		22		/* Invalid argument */
-#define	ENFILE		23		/* Too many open files in system */
-#define	EMFILE		24		/* Too many open files */
-#define	ENOTTY		25		/* Inappropriate ioctl for device */
-#ifndef _POSIX_SOURCE
-#define	ETXTBSY		26		/* Text file busy */
-#endif
-#define	EFBIG		27		/* File too large */
-#define	ENOSPC		28		/* No space left on device */
-#define	ESPIPE		29		/* Illegal seek */
-#define	EROFS		30		/* Read-only file system */
-#define	EMLINK		31		/* Too many links */
-#define	EPIPE		32		/* Broken pipe */
+extern int errno;		  /* place where the error numbers go */
 
-/* math software */
-#define	EDOM		33		/* Numerical argument out of domain */
-#define	ERANGE		34		/* Result too large */
+/* Here are the numerical values of the error numbers. */
+#define _NERROR               70  /* number of errors */  
 
-/* non-blocking and interrupt i/o */
-#define	EAGAIN		35		/* Resource temporarily unavailable */
-#ifndef _POSIX_SOURCE
-#define	EWOULDBLOCK	EAGAIN		/* Operation would block */
-#define	EINPROGRESS	36		/* Operation now in progress */
-#define	EALREADY	37		/* Operation already in progress */
+#define ERROR         (_SIGN 99)  /* generic error */
+#define EPERM         (_SIGN  1)  /* operation not permitted */
+#define ENOENT        (_SIGN  2)  /* no such file or directory */
+#define ESRCH         (_SIGN  3)  /* no such process */
+#define EINTR         (_SIGN  4)  /* interrupted function call */
+#define EIO           (_SIGN  5)  /* input/output error */
+#define ENXIO         (_SIGN  6)  /* no such device or address */
+#define E2BIG         (_SIGN  7)  /* arg list too long */
+#define ENOEXEC       (_SIGN  8)  /* exec format error */
+#define EBADF         (_SIGN  9)  /* bad file descriptor */
+#define ECHILD        (_SIGN 10)  /* no child process */
+#define EAGAIN        (_SIGN 11)  /* resource temporarily unavailable */
+#define ENOMEM        (_SIGN 12)  /* not enough space */
+#define EACCES        (_SIGN 13)  /* permission denied */
+#define EFAULT        (_SIGN 14)  /* bad address */
+#define ENOTBLK       (_SIGN 15)  /* Extension: not a block special file */
+#define EBUSY         (_SIGN 16)  /* resource busy */
+#define EEXIST        (_SIGN 17)  /* file exists */
+#define EXDEV         (_SIGN 18)  /* improper link */
+#define ENODEV        (_SIGN 19)  /* no such device */
+#define ENOTDIR       (_SIGN 20)  /* not a directory */
+#define EISDIR        (_SIGN 21)  /* is a directory */
+#define EINVAL        (_SIGN 22)  /* invalid argument */
+#define ENFILE        (_SIGN 23)  /* too many open files in system */
+#define EMFILE        (_SIGN 24)  /* too many open files */
+#define ENOTTY        (_SIGN 25)  /* inappropriate I/O control operation */
+#define ETXTBSY       (_SIGN 26)  /* no longer used */
+#define EFBIG         (_SIGN 27)  /* file too large */
+#define ENOSPC        (_SIGN 28)  /* no space left on device */
+#define ESPIPE        (_SIGN 29)  /* invalid seek */
+#define EROFS         (_SIGN 30)  /* read-only file system */
+#define EMLINK        (_SIGN 31)  /* too many links */
+#define EPIPE         (_SIGN 32)  /* broken pipe */
+#define EDOM          (_SIGN 33)  /* domain error    	(from ANSI C std) */
+#define ERANGE        (_SIGN 34)  /* result too large	(from ANSI C std) */
+#define EDEADLK       (_SIGN 35)  /* resource deadlock avoided */
+#define ENAMETOOLONG  (_SIGN 36)  /* file name too long */
+#define ENOLCK        (_SIGN 37)  /* no locks available */
+#define ENOSYS        (_SIGN 38)  /* function not implemented */
+#define ENOTEMPTY     (_SIGN 39)  /* directory not empty */
 
-/* ipc/network software -- argument errors */
-#define	ENOTSOCK	38		/* Socket operation on non-socket */
-#define	EDESTADDRREQ	39		/* Destination address required */
-#define	EMSGSIZE	40		/* Message too long */
-#define	EPROTOTYPE	41		/* Protocol wrong type for socket */
-#define	ENOPROTOOPT	42		/* Protocol not available */
-#define	EPROTONOSUPPORT	43		/* Protocol not supported */
-#define	ESOCKTNOSUPPORT	44		/* Socket type not supported */
-#define	EOPNOTSUPP	45		/* Operation not supported on socket */
-#define	EPFNOSUPPORT	46		/* Protocol family not supported */
-#define	EAFNOSUPPORT	47		/* Address family not supported by protocol family */
-#define	EADDRINUSE	48		/* Address already in use */
-#define	EADDRNOTAVAIL	49		/* Can't assign requested address */
+/* The following errors relate to networking. */
+#define EPACKSIZE     (_SIGN 50)  /* invalid packet size for some protocol */
+#define EOUTOFBUFS    (_SIGN 51)  /* not enough buffers left */
+#define EBADIOCTL     (_SIGN 52)  /* illegal ioctl for device */
+#define EBADMODE      (_SIGN 53)  /* badmode in ioctl */
+#define EWOULDBLOCK   (_SIGN 54)
+#define EBADDEST      (_SIGN 55)  /* not a valid destination address */
+#define EDSTNOTRCH    (_SIGN 56)  /* destination not reachable */
+#define EISCONN	      (_SIGN 57)  /* all ready connected */
+#define EADDRINUSE    (_SIGN 58)  /* address in use */
+#define ECONNREFUSED  (_SIGN 59)  /* connection refused */
+#define ECONNRESET    (_SIGN 60)  /* connection reset */
+#define ETIMEDOUT     (_SIGN 61)  /* connection timed out */
+#define EURG	      (_SIGN 62)  /* urgent data present */
+#define ENOURG	      (_SIGN 63)  /* no urgent data present */
+#define ENOTCONN      (_SIGN 64)  /* no connection (yet or anymore) */
+#define ESHUTDOWN     (_SIGN 65)  /* a write call to a shutdown connection */
+#define ENOCONN       (_SIGN 66)  /* no such connection */
 
-/* ipc/network software -- operational errors */
-#define	ENETDOWN	50		/* Network is down */
-#define	ENETUNREACH	51		/* Network is unreachable */
-#define	ENETRESET	52		/* Network dropped connection on reset */
-#define	ECONNABORTED	53		/* Software caused connection abort */
-#define	ECONNRESET	54		/* Connection reset by peer */
-#define	ENOBUFS		55		/* No buffer space available */
-#define	EISCONN		56		/* Socket is already connected */
-#define	ENOTCONN	57		/* Socket is not connected */
-#define	ESHUTDOWN	58		/* Can't send after socket shutdown */
-#define	ETOOMANYREFS	59		/* Too many references: can't splice */
-#define	ETIMEDOUT	60		/* Connection timed out */
-#define	ECONNREFUSED	61		/* Connection refused */
+/* The following are not POSIX errors, but they can still happen. */
+#define ELOCKED      (_SIGN 101)  /* can't send message */
+#define EBADCALL     (_SIGN 102)  /* error on send/receive */
 
-#define	ELOOP		62		/* Too many levels of symbolic links */
-#endif /* _POSIX_SOURCE */
-#define	ENAMETOOLONG	63		/* File name too long */
+/* The following error codes are generated by the kernel itself. */
+#ifdef _SYSTEM
+#define E_BAD_DEST     -1001	/* destination address illegal */
+#define E_BAD_SRC      -1002	/* source address illegal */
+#define E_TRY_AGAIN    -1003	/* can't send-- tables full */
+#define E_OVERRUN      -1004	/* interrupt for task that is not waiting */
+#define E_BAD_BUF      -1005	/* message buf outside caller's addr space */
+#define E_TASK         -1006	/* can't send to task */
+#define E_NO_MESSAGE   -1007	/* RECEIVE failed: no message present */
+#define E_NO_PERM      -1008	/* ordinary users can't send to tasks */
+#define E_BAD_FCN      -1009	/* only valid fcns are SEND, RECEIVE, BOTH */
+#define E_BAD_ADDR     -1010	/* bad address given to utility routine */
+#define E_BAD_PROC     -1011	/* bad proc number given to utility */
+#endif /* _SYSTEM */
 
-/* should be rearranged */
-#ifndef _POSIX_SOURCE
-#define	EHOSTDOWN	64		/* Host is down */
-#define	EHOSTUNREACH	65		/* No route to host */
-#endif /* _POSIX_SOURCE */
-#define	ENOTEMPTY	66		/* Directory not empty */
-
-/* quotas & mush */
-#ifndef _POSIX_SOURCE
-#define	EPROCLIM	67		/* Too many processes */
-#define	EUSERS		68		/* Too many users */
-#define	EDQUOT		69		/* Disc quota exceeded */
-
-/* Network File System */
-#define	ESTALE		70		/* Stale NFS file handle */
-#define	EREMOTE		71		/* Too many levels of remote in path */
-#define	EBADRPC		72		/* RPC struct is bad */
-#define	ERPCMISMATCH	73		/* RPC version wrong */
-#define	EPROGUNAVAIL	74		/* RPC prog. not avail */
-#define	EPROGMISMATCH	75		/* Program version wrong */
-#define	EPROCUNAVAIL	76		/* Bad procedure for program */
-#endif /* _POSIX_SOURCE */
-
-#define	ENOLCK		77		/* No locks available */
-#define	ENOSYS		78		/* Function not implemented */
-
-#define	EFTYPE		79		/* Inappropriate file type or format */
-
-#ifdef KERNEL
-/* pseudo-errors returned inside kernel to modify return to process */
-#define	ERESTART	-1		/* restart syscall */
-#define	EJUSTRETURN	-2		/* don't modify regs, just return */
-#endif
+#endif /* _ERRNO_H */

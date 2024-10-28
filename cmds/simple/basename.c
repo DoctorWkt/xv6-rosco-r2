@@ -20,7 +20,11 @@
 
 #define EOS '\0'
 
-int main(int argc, char *argv[])
+_PROTOTYPE(int main, (int argc, char **argv));
+
+int main(argc, argv)
+int argc;
+char *argv[];
 {
   char *result_string;		/* The pointer into argv[1]. */
   char *temp;			/* Used to move around in argv[1]. */
@@ -68,5 +72,5 @@ int main(int argc, char *argv[])
 
   /* Print the resultant string. */
   printf("%s\n", result_string);
-  exit(0);
+  return(0);
 }

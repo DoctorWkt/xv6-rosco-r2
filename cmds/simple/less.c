@@ -10,6 +10,8 @@
 #include <string.h>
 #include <termios.h>
 
+int consgetc();
+
 #define BUFLEN	512		// Size of the line buffer
 #define LINELEN	 79		// We only print out this much of any line
 

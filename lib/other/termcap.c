@@ -29,6 +29,7 @@
  *   - Allow '#' comments in definition file		 [tgetent]
  */
 
+#include <lib.h>
 #include <termcap.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -69,14 +70,13 @@ char *name;
 
   if ((file = getenv("TERMCAP")) == (char *)NULL)
 	file = "/etc/termcap";
-  else if (*file != '/') {
+  else if (*file != '/')
 	if ((term = getenv("TERM")) != (char *)NULL && strcmp(term, name) == 0) {
 		*bp = '\0';
 		strncat(bp, file, 1023);
 		return(1);
 	} else
 		file = "/etc/termcap";
-  }
 
   if ((fp = fopen(file, "r")) == (FILE *) NULL) {
 	capab = (char *)NULL;		/* no valid termcap  */
@@ -256,7 +256,7 @@ char *cm;
 int destcol;
 int destline;
 {
-  static char ret[24];
+  PRIVATE char ret[24];
   char *rp = ret;
   int incr = 0;
   int argno = 0;
@@ -316,7 +316,7 @@ int destline;
 int tputs(cp, affcnt, outc)
 register char *cp;
 int affcnt;
-void *outc(int ch);
+_PROTOTYPE( void (*outc), (int ch));
 {
   if (cp == (char *)NULL) return(1);
   /* Do any padding interpretation - left null for MINIX just now */

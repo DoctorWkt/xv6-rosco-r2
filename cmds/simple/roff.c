@@ -2,6 +2,7 @@
  * (c) 2016 Warren Toomey, GPL3.
  */
 #define EOFILE EOF
+#include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

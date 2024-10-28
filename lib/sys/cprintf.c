@@ -1,13 +1,13 @@
-#include <xv6/types.h>
-#include <xv6/defs.h>
+#include <sys/types.h>
 
 extern void consputc(char ch);
+void panic(char *s);
 
 static void printint(int xx, int base, int sign) {
   static char digits[] = "0123456789abcdef";
   char buf[16];
   int i;
-  uint x;
+  unsigned int x;
 
   if (sign && (sign = xx < 0))
     x = -xx;
@@ -30,13 +30,13 @@ static void printint(int xx, int base, int sign) {
 
 void cprintf(char *fmt, ...) {
   int i, c;
-  uint *argp;
+  unsigned int *argp;
   char *s;
 
   if (fmt == 0)
     panic("null fmt");
 
-  argp = (uint *) (void *) (&fmt + 1);
+  argp = (unsigned int *) (void *) (&fmt + 1);
   for (i = 0; (c = fmt[i] & 0xff) != 0; i++) {
     if (c != '%') {
       consputc(c);

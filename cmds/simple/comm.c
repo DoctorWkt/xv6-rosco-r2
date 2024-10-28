@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <minix/minlib.h>
 #include <stdio.h>
 
 #define BUFFER_SIZE (512)
@@ -36,17 +37,19 @@ int colflgs[3] = {1, 2, 3};	/* number of tabs + 1: 0 => no column */
 
 static char *umsg = "Usage: comm [-[123]] file1 file2\n";
 
-int main(int argc, char *argv[]);
-void usage(void);
-void error(char *s, char *f);
-void eopen(char *fn, struct file *file);
-int getbuf(struct file *file);
-int readline(int fno);
-void comm(void);
-void putcol(int col, char *buf);
-void cpycol(int col);
+_PROTOTYPE(int main, (int argc, char **argv));
+_PROTOTYPE(void usage, (void));
+_PROTOTYPE(void error, (char *s, char *f));
+_PROTOTYPE(void eopen, (char *fn, struct file *file));
+_PROTOTYPE(int getbuf, (struct file *file));
+_PROTOTYPE(int readline, (int fno));
+_PROTOTYPE(void comm, (void));
+_PROTOTYPE(void putcol, (int col, char *buf));
+_PROTOTYPE(void cpycol, (int col));
 
-int main(int argc, char *argv[])
+int main(argc, argv)
+int argc;
+char *argv[];
 {
   int cnt;
   if (argc > 1 && argv[1][0] == '-' && argv[1][1] != '\0') {
@@ -69,25 +72,29 @@ int main(int argc, char *argv[])
   eopen(argv[1], &files[0]);
   eopen(argv[2], &files[1]);
   comm();
-  exit(0);
+  return(0);
 }
 
-void usage(void)
+void usage()
 {
 
-  fprintf(stderr,umsg);
+  std_err(umsg);
   exit(1);
 }
 
-void error(char *s, char *f)
+void error(s, f)
+char *s, *f;
 {
-  fprintf(stderr, "comm: %s", s);
-  if (f) fprintf(stderr, "%s", f);
-  fprintf(stderr, "\n");
+  std_err("comm: ");
+  std_err(s);
+  if (f) std_err(f);
+  std_err("\n");
   exit(1);
 }
 
-void eopen(char *fn, struct file *file)
+void eopen(fn, file)
+char *fn;
+struct file *file;
 {
   file->name = fn;
   file->next = file->endp = &file->buf[0];
@@ -99,7 +106,8 @@ void eopen(char *fn, struct file *file)
 }
 
 
-int getbuf(struct file *file)
+int getbuf(file)
+struct file *file;
 {
 /* Get a buffer-full from the file.  Return true if no characters
  * were obtained because we are at end of file.
@@ -119,7 +127,8 @@ int getbuf(struct file *file)
 }
 
 
-int readline(int fno)
+int readline(fno)
+int fno;
 {
 /* Read up to the next '\n' character to buf.
  * Return a complete line, even if end of file occurs within a line.
@@ -139,7 +148,7 @@ int readline(int fno)
   return(1);
 }
 
-void comm(void)
+void comm()
 {
   register int res;
 
@@ -178,7 +187,9 @@ void comm(void)
   /* NOTREACHED */
 }
 
-void putcol(int col, char *buf)
+void putcol(col, buf)
+int col;
+char *buf;
 {
   int cnt;
 
@@ -187,7 +198,8 @@ void putcol(int col, char *buf)
   printf("%s", buf);
 }
 
-void cpycol(int col)
+void cpycol(col)
+int col;
 {
   if (colflgs[col]) while (readline(col))
 		putcol(col, lines[col]);

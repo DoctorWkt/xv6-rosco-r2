@@ -1,7 +1,7 @@
 /*
  * getopt - parse command-line options
  */
-/* $Header: /usr/local/src/xv6-rosco-r2/lib/other/RCS/getopt.c,v 1.1 2024/09/24 03:12:28 wkt Exp $ */
+/* $Header: /home/wkt/Minix_1.6.25/lib/other/RCS/getopt.c,v 1.1 2024/10/25 01:13:18 wkt Exp $ */
 
 #include	<stdlib.h>
 #include	<string.h>
@@ -25,10 +25,10 @@ char **argv;
 char *opts;
 {
 	static int sp = 1;
-	int c;
+	register c;
 	register char *cp;
 
-	if (sp == 1) {
+	if (sp == 1)
 		if (optind >= argc ||
 		   argv[optind][0] != '-' || argv[optind][1] == '\0')
 			return EOF;
@@ -36,7 +36,6 @@ char *opts;
 			optind++;
 			return EOF;
 		}
-	}
 	optopt = c = argv[optind][sp];
 	if (c == ':' || (cp=strchr(opts, c)) == NULL) {
 		ERR (": illegal option -- ", c);

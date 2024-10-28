@@ -1,42 +1,32 @@
 TOP_SRCDIR = ..
 include $(TOP_SRCDIR)/Makefile.common
 
-all: libc.a libtermcap.a libcurses.a
-
-libc.a:
-	(cd gen; make)
-	(cd stdio; make)
-	(cd stdlib; make)
-	(cd string; make)
-	(cd locale; make)
+all:	
+	(cd ansi; make)
+	(cd curses; make)
+#	(cd float; make)
+	(cd math; make)
 	(cd other; make)
-	(cd regex; make)
-	(cd regexp; make)
+#	(cd posix; make)
 	(cd sys; make)
-	$(AR) vr libc.a gen/*.o stdio/*.o stdlib/*.o string/*.o \
-		locale/*.o other/*.o regex/*.o regexp/*.o sys/*.o
+	(cd stdio; make)
+#	(cd termios; make)
+#	$(AR) vr libc.a ansi/*.o other/*.o sys/*.o stdio/*.o termios/*.o
+	$(AR) vr libc.a ansi/*.o other/*.o sys/*.o stdio/*.o
 	$(RANLIB) libc.a
-
-libtermcap.a:
-	(cd libterm; make)
-	$(AR) vr libtermcap.a libterm/*.o
-	$(RANLIB) libtermcap.a
-
-libcurses.a:
-	make -C libcurses all
-	$(AR) vr libcurses.a libcurses/*.o
+	$(AR) vr libcurses.a curses/*.o
 	$(RANLIB) libcurses.a
+#	$(AR) vr libfp.a float/*.o
+#	$(RANLIB) libfp.a
+
 
 clean:
-	(cd sys; make clean)
-	(cd gen; make clean)
-	(cd stdio; make clean)
-	(cd stdlib; make clean)
-	(cd string; make clean)
-	(cd libcurses; make clean)
-	(cd libterm; make clean)
-	(cd locale; make clean)
+	@rm -rf *.a
+	(cd ansi; make clean)
+	(cd curses; make clean)
+#	(cd float; make clean)
+	(cd math; make clean)
 	(cd other; make clean)
-	(cd regex; make clean)
-	(cd regexp; make clean)
-	rm -f *.a
+#	(cd posix; make clean)
+	(cd stdio; make clean)
+#	(cd termios; make clean)

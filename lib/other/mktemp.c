@@ -1,43 +1,31 @@
-/* mktemp - make a name for a temporary file */
+/* $Header: /home/wkt/Minix_1.6.25/lib/other/RCS/mktemp.c,v 1.1 2024/10/25 01:13:18 wkt Exp $ */
+/* mktemp - make a name for a temporary file; only here for backwards compat */
+/* no _-protected system-calls? */
 
 #include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <unistd.h>
-#include <time.h>
 
-char *mktemp(char *template)
+char *mktemp(template)
+char *template;
 {
-  int k;
-  char *p;
-  time_t tim;
-  int fd;
+  register int pid, k;
+  register char *p;
 
-  tim = time(NULL);		/* get time as semi-unique number */
+  pid = getpid();		/* get process id as semi-unique number */
   p = template;
-  while (*p != 0) p++;		/* find end of string */
+  while (*p) p++;		/* find end of string */
 
-  /* Replace XXXXXX at end of template with a letter, then as many of the
-   * trailing digits of the tim as fit.
-   */
+  /* Replace XXXXXX at end of template with pid. */
   while (*--p == 'X') {
-	*p = '0' + (tim % 10);
-	tim /= 10;
+	*p = '0' + (pid % 10);
+	pid /= 10;
   }
-  if (*++p != 0) {
-	for (k = 'a'; k <= 'z'; k++) {
-		*p = k;
-		fd= open(template, O_RDONLY);
-		if (fd < 0) return(template);
-		close(fd);
+  p++;
+  for (k = 'a'; k <= 'z'; k++) {
+	*p = k;
+	if (access(template, 0) < 0) {
+		return template;
 	}
   }
   return("/");
-}
-
-int mkstemp(char *template)
-{
-  char *name= mktemp(template);
-  if (name==NULL) return(-1);
-  return(open(name, O_RDWR));
 }

@@ -5,19 +5,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <string.h>
-#include <errno.h>
 
 int errs;
 
-#if __STDC__
-int main(int argc, char **argv);
-void crc(char *fname);
-#else
-void crc();
-#endif
+_PROTOTYPE(int main, (int argc, char **argv));
+_PROTOTYPE(void crc, (char *fname));
 
-int main(int argc, char **argv)
+int main(argc, argv)
+int argc;
+char **argv;
 {
   char line[256];
 
@@ -35,7 +31,7 @@ int main(int argc, char **argv)
 		argv++;
 		argc--;
 	} while (argc > 1);
-  exit(errs != 0);
+  return(errs != 0);
 }
 
 /* Crctab calculated by Mark G. Mendel, Network Systems Corporation */
@@ -87,7 +83,8 @@ static unsigned short crctab[256] = {
 
 #define updcrc(cp, crc) ( crctab[((crc >> 8) & 255)] ^ (crc << 8) ^ cp)
 
-void crc(char *fname)
+void crc(fname)
+char *fname;
 {
   register int c;
   register long len = 0;
@@ -97,7 +94,7 @@ void crc(char *fname)
   if (fname == NULL)
 	fp = stdin;
   else if ((fp = fopen(fname, "r")) == NULL) {
-	fprintf(stderr, "crc: Can't open %s: %s\n", fname, strerror(errno));
+	fprintf(stderr, "crc: cannot open %s\n", fname);
 	errs++;
 	return;
   }

@@ -72,14 +72,15 @@ char *name;
 char line[BUFSIZ];
 int exit_status;
 
-void warn(int warn_number, char *option);
-void cuterror(int err);
-void get_args(void);
-void cut(void);
-int main(int argc, char *argv[]);
+_PROTOTYPE(int main, (int argc, char **argv));
+_PROTOTYPE(void warn, (int warn_number, char *option));
+_PROTOTYPE(void cuterror, (int err));
+_PROTOTYPE(void get_args, (void));
+_PROTOTYPE(void cut, (void));
 
-
-void warn(int warn_number, char *option)
+void warn(warn_number, option)
+int warn_number;
+char *option;
 {
   static char *warn_msg[] = {
 			   "%s: Option -d allowed only with -f\n",
@@ -93,7 +94,8 @@ void warn(int warn_number, char *option)
 
 }
 
-void cuterror(int err)
+void cuterror(err)
+int err;
 {
   static char *err_mes[] = {
 			  "%s: syntax error\n",
@@ -110,7 +112,7 @@ void cuterror(int err)
 }
 
 
-void get_args(void)
+void get_args()
 {
   int i = 0;
   int arg_ptr = 0;
@@ -149,7 +151,7 @@ void get_args(void)
 }
 
 
-void cut(void)
+void cut()
 {
   int i, j, length, maxcol;
   char *columns[MAX_FIELD];
@@ -201,7 +203,10 @@ void cut(void)
   }
 }
 
-int main(int argc, char *argv[])
+
+int main(argc, argv)
+int argc;
+char *argv[];
 {
   int i = 1;
   int numberFilenames = 0;
@@ -301,5 +306,5 @@ int main(int argc, char *argv[])
 	cut();
   }
 
-  exit(exit_status);
+  return(exit_status);
 }

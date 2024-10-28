@@ -15,20 +15,23 @@ char buf[512], buffer[BUFSIZ];
 int next;
 int bytespresent;
 
-int main(int argc, char *argv[]);
-long offset(int argc, char *argv[], int k);
-void dumpfile(void);
-void wdump(short *words, int k, int radix);
-void bdump(char bytes[16], int k, int c);
-void byte(int val, int c);
-int getwords(short **words);
-int same(short *w1, int *w2);
-void outword(int val, int radix);
-void outnum(int num, int radix);
-void addrout(long l);
-void usage(void);
+_PROTOTYPE(int main, (int argc, char **argv));
+_PROTOTYPE(long offset, (int argc, char *argv [], int k));
+_PROTOTYPE(void dumpfile, (void));
+_PROTOTYPE(void wdump, (short *words, int k, int radix));
+_PROTOTYPE(void bdump, (char bytes [16 ], int k, int c));
+_PROTOTYPE(void byte, (int val, int c));
+_PROTOTYPE(int getwords, (short **words));
+_PROTOTYPE(int same, (short *w1, int *w2));
+_PROTOTYPE(void outword, (int val, int radix));
+_PROTOTYPE(void outnum, (int num, int radix));
+_PROTOTYPE(void addrout, (long l));
+_PROTOTYPE(char hexit, (int k));
+_PROTOTYPE(void usage, (void));
 
-int main(int argc, char *argv[])
+int main(argc, argv)
+int argc;
+char *argv[];
 {
   int k, flags;
   char *p;
@@ -95,7 +98,10 @@ int main(int argc, char *argv[])
 }
 
 
-long offset(int argc, char *argv [], int k)
+long offset(argc, argv, k)
+int argc;
+char *argv[];
+int k;
 {
   int dot, radix;
   char *p, c;
@@ -127,7 +133,7 @@ long offset(int argc, char *argv [], int k)
 }
 
 
-void dumpfile(void)
+void dumpfile()
 {
   int k;
   short *words;
@@ -162,17 +168,22 @@ void dumpfile(void)
 }
 
 
-void wdump(short *words, int k, int radix)
+void wdump(words, k, radix)
+short *words;
+int k, radix;
 {
   int i;
 
   if (linenr++ != 1) printf("       ");
-  for (i = 0; i < (k + 1) / 2; i++) outword(words[i] & 0xFFFF, radix);
+  for (i = 0; i < (k + 1) / 2; i++) outword(words[i], radix);
   printf("\n");
 }
 
 
-void bdump(char bytes[16], int k, int c)
+void bdump(bytes, k, c)
+char bytes[16];
+int k;
+char c;
 {
   int i;
 
@@ -181,7 +192,9 @@ void bdump(char bytes[16], int k, int c)
   printf("\n");
 }
 
-void byte(int val, int c)
+void byte(val, c)
+int val;
+char c;
 {
   if (c == 'b') {
 	printf(" ");
@@ -209,7 +222,8 @@ void byte(int val, int c)
 }
 
 
-int getwords(short **words)
+int getwords(words)
+short **words;
 {
   int count;
 
@@ -228,7 +242,9 @@ int getwords(short **words)
   return(count);
 }
 
-int same(short *w1, int *w2)
+int same(w1, w2)
+short *w1;
+int *w2;
 {
   int i;
   i = 8;
@@ -237,7 +253,8 @@ int same(short *w1, int *w2)
   return(1);
 }
 
-void outword(int val, int radix)
+void outword(val, radix)
+int val, radix;
 {
 /* Output 'val' in 'radix' in a field of total size 'width'. */
 
@@ -258,38 +275,65 @@ void outword(int val, int radix)
 }
 
 
-void outnum(int num, int radix)
+void outnum(num, radix)
+int num, radix;
 {
 /* Output a number with all leading 0s present.  Octal is 6 places,
  * decimal is 5 places, hex is 4 places.
  */
+  int d, i;
   unsigned val;
+  char s[8];
 
   val = (unsigned) num;
   if (radix == 8)
-	printf ("%06o", val);
+	d = 6;
   else if (radix == 10)
-	printf ("%05u", val);
+	d = 5;
   else if (radix == 16)
-	printf ("%04x", val);
+	d = 4;
   else if (radix == 7) {
-  	/* special case */
-	printf ("%03o", val);
+	d = 3;
+	radix = 8;
+  }
+  for (i = 0; i < d; i++) {
+	s[i] = val % radix;
+	val -= s[i];
+	val = val / radix;
+  }
+  for (i = d - 1; i >= 0; i--) {
+	if (s[i] > 9)
+		printf("%c", 'a' + s[i] - 10);
+	else
+		printf("%c", s[i] + '0');
   }
 }
 
 
-void addrout(long l)
+void addrout(l)
+long l;
 {
+  int i;
+
   if (hflag == 0) {
-	printf("%07lo", l);
+	for (i = 0; i < 7; i++)
+		printf("%c", (int) ((l >> (18 - 3 * i)) & 07) + '0');
   } else {
-	printf("%07lx", l);
+	for (i = 0; i < 7; i++)
+		printf("%c", hexit((int) ((l >> (24 - 4 * i)) & 0x0F)));
   }
 }
 
+char hexit(k)
+int k;
+{
+  if (k <= 9)
+	return('0' + k);
+  else
+	return('A' + k - 10);
+}
 
-void usage(void)
+void usage()
 {
   fprintf(stderr, "Usage: od [-bcdhovx] [file] [ [+] offset [.] [b] ]\n");
 }

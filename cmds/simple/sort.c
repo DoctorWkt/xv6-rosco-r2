@@ -1,39 +1,3 @@
-/*
-
-  Copyright (c) 1987,1997, Prentice Hall
-  All rights reserved.
-  
-  Redistribution and use of the MINIX operating system in source and
-  binary forms, with or without modification, are permitted provided
-  that the following conditions are met:
-  
-     * Redistributions of source code must retain the above copyright
-       notice, this list of conditions and the following disclaimer.
-  
-     * Redistributions in binary form must reproduce the above
-       copyright notice, this list of conditions and the following
-       disclaimer in the documentation and/or other materials provided
-       with the distribution.
-  
-     * Neither the name of Prentice Hall nor the names of the software
-       authors or contributors may be used to endorse or promote
-       products derived from this software without specific prior
-       written permission.
-  
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS, AUTHORS, AND
-  CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
-  INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-  IN NO EVENT SHALL PRENTICE HALL OR ANY AUTHORS OR CONTRIBUTORS BE
-  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-  BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
-  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-*/  
 /* sort - sort a file of lines		Author: Michiel Huisjes */
 
 /* SYNOPSIS:
@@ -77,10 +41,8 @@
 #include <stdio.h>
 #include <limits.h>
 
-// #define OPEN_MAX	8		/* HACK FIXME */
 #define OPEN_FILES	(OPEN_MAX-4)	/* Nr of open files per process */
-#define MEMORY_SIZE	((10 * sizeof(int)) * 1024)
-					/* Total mem_size */
+#define MEMORY_SIZE	(20 * 1024)	/* Total mem_size */
 #define LINE_SIZE	(1024 >> 1)	/* Max length of a line */
 #define IO_SIZE		(2 * 1024)	/* Size of buffered output */
 #define STD_OUT		 1	/* Fd of terminal */
@@ -164,40 +126,40 @@ int disabled;			/* Nr of files done */
 char USAGE[] = "Usage: sort [-funbirdcmt'x'] [+beg_pos [-end_pos]] [-o outfile] [file] ..";
 
 /* Forward declarations */
-int main(int argc, char **argv);
-void get_opts(char *ptr, FIELD * field);
-void new_field(FIELD * field, int *offset, BOOL beg_fl);
-void adjust_options(FIELD * field);
-void error(BOOL quit, char *message, char *arg);
-void open_outfile(void);
-void get_file(int fd, off_t size);
-int last_line(void);
-void print_table(int fd);
-char *file_name(int nr);
-void mread(int fd, char *address, int bytes);
-void mwrite(int fd, char *address, int bytes);
-void sort(void);
-void sort_table(int nel);
-void incr(int si, int ei);
-int cmp_fields(char *el1, char *el2);
-void build_field(char *dest, FIELD * field, char *src);
-char *skip_fields(char *str, int nf);
-int compare(char *el1, char *el2);
-int cmp(unsigned char *el1, unsigned char *el2, FIELD * field);
-int digits(char *str1, char *str2, BOOL check_sign);
-void files_merge(int file_cnt);
-void merge(int start_file, int limit_file);
-void put_line(char *line);
-MERGE * print(MERGE * merg, int file_cnt);
-int read_line(MERGE * merg);
-MERGE * skip_lines(MERGE * smallest, int file_cnt);
-void uniq_lines(MERGE * merg);
-void check_file(int fd, char *file);
-int length(char *line);
-void copy(char *dest, char *src);
-char *msbrk(int size);
-void mbrk(char *address);
-void catch(int dummy);
+_PROTOTYPE(int main, (int argc, char **argv));
+_PROTOTYPE(void get_opts, (char *ptr, FIELD * field));
+_PROTOTYPE(void new_field, (FIELD * field, int *offset, BOOL beg_fl));
+_PROTOTYPE(void adjust_options, (FIELD * field));
+_PROTOTYPE(void error, (BOOL quit, char *message, char *arg));
+_PROTOTYPE(void open_outfile, (void));
+_PROTOTYPE(void get_file, (int fd, off_t size));
+_PROTOTYPE(int last_line, (void));
+_PROTOTYPE(void print_table, (int fd));
+_PROTOTYPE(char *file_name, (int nr));
+_PROTOTYPE(void mread, (int fd, char *address, int bytes));
+_PROTOTYPE(void mwrite, (int fd, char *address, int bytes));
+_PROTOTYPE(void sort, (void));
+_PROTOTYPE(void sort_table, (int nel));
+_PROTOTYPE(void incr, (int si, int ei));
+_PROTOTYPE(int cmp_fields, (char *el1, char *el2));
+_PROTOTYPE(void build_field, (char *dest, FIELD * field, char *src));
+_PROTOTYPE(char *skip_fields, (char *str, int nf));
+_PROTOTYPE(int compare, (char *el1, char *el2));
+_PROTOTYPE(int cmp, (unsigned char *el1, unsigned char *el2, FIELD * field));
+_PROTOTYPE(int digits, (char *str1, char *str2, BOOL check_sign));
+_PROTOTYPE(void files_merge, (int file_cnt));
+_PROTOTYPE(void merge, (int start_file, int limit_file));
+_PROTOTYPE(void put_line, (char *line));
+_PROTOTYPE(MERGE * print, (MERGE * merg, int file_cnt));
+_PROTOTYPE(int read_line, (MERGE * merg));
+_PROTOTYPE(MERGE * skip_lines, (MERGE * smallest, int file_cnt));
+_PROTOTYPE(void uniq_lines, (MERGE * merg));
+_PROTOTYPE(void check_file, (int fd, char *file));
+_PROTOTYPE(int length, (char *line));
+_PROTOTYPE(void copy, (char *dest, char *src));
+_PROTOTYPE(char *msbrk, (int size));
+_PROTOTYPE(void mbrk, (char *address));
+_PROTOTYPE(void catch, (int dummy));
 
 /* Table of all chars. 0 means no special meaning. */
 char table[256] = {
@@ -264,7 +226,9 @@ char table[256] = {
  * Get_opts () assigns the options into the field structure as described in ptr.
  * This field structure could be the GLOBAL one.
  */
-void get_opts(char *ptr, FIELD * field)
+void get_opts(ptr, field)
+register char *ptr;
+register FIELD *field;
 {
   switch (*ptr) {
       case 'b':			/* Skip leading blanks */
@@ -296,10 +260,10 @@ void get_opts(char *ptr, FIELD * field)
  * as -c.d and [opts] are optional. Nr before digit is field nr. Nr after digit
  * is offset from field.
  */
-void new_field(FIELD * field, int *offset, BOOL beg_fl)
-/* register FIELD *field;	 Field to assign */
-/* int *offset;			 Offset in argv structure */
-/* BOOL beg_fl;			 Assign beg or end of field */
+void new_field(field, offset, beg_fl)
+register FIELD *field;		/* Field to assign */
+int *offset;			/* Offset in argv structure */
+BOOL beg_fl;			/* Assign beg or end of field */
 {
   register char *ptr;
 
@@ -330,7 +294,7 @@ void new_field(FIELD * field, int *offset, BOOL beg_fl)
   }
   if (beg_fl) {			/* Check for end pos */
 	ptr = argptr[*offset];
-	if (ptr && *ptr == '-' && ((table[*(ptr + 1)] & DIGIT) || *(ptr + 1) == '.')) {
+	if (ptr && *ptr == '-' && table[*(ptr + 1)] & DIGIT) {
 		new_field(field, offset, FALSE);
 		if (field->beg_field > field->end_field)
 			error(TRUE, "End field is before start field!", NIL_PTR);
@@ -339,7 +303,9 @@ void new_field(FIELD * field, int *offset, BOOL beg_fl)
   }
 }
 
-int main(int argc, char **argv)
+int main(argc, argv)
+int argc;
+char *argv[];
 {
   int arg_count = 1;		/* Offset in argv */
   struct stat st;
@@ -388,8 +354,7 @@ int main(int argc, char **argv)
 
 /* Create name of tem_files 'sort.pid.aa' */
   ptr = &temp_files[10];
-  // pid = getpid();
-  pid = 1123;
+  pid = getpid();
   pow = 10000;
   while (pow != 0) {
 	*ptr++ = pid / pow + '0';
@@ -397,7 +362,7 @@ int main(int argc, char **argv)
 	pow /= 10;
   }
 
-  // signal(SIGINT, catch);
+  signal(SIGINT, catch);
 
 /* Only merge files. Set up */
   if (only_merge) {
@@ -441,13 +406,14 @@ int main(int argc, char **argv)
 	exit(0);
 
   files_merge(nr_of_files);
-  return 0;
+  return(0);
 }
 
 /* Adjust_options() assigns all global variables set also in the fields
  * assigned.
  */
-void adjust_options(FIELD * field)
+void adjust_options(field)
+register FIELD *field;
 {
   register FIELD *gfield = &fields[GLOBAL];
 
@@ -460,7 +426,9 @@ void adjust_options(FIELD * field)
 }
 
 /* Error () prints the error message on stderr and exits if quit == TRUE. */
-void error(BOOL quit, char *message, char *arg)
+void error(quit, message, arg)
+register BOOL quit;
+register char *message, *arg;
 {
   write(2, message, strlen(message));
   if (arg != NIL_PTR) write(2, arg, strlen(arg));
@@ -471,7 +439,7 @@ void error(BOOL quit, char *message, char *arg)
 /* Open_outfile () assigns to out_fd the fd where the output must go when all
  * the sorting is done.
  */
-void open_outfile(void)
+void open_outfile()
 {
   if (output_file == NIL_PTR)
 	out_fd = STD_OUT;
@@ -482,9 +450,9 @@ void open_outfile(void)
 /* Get_file reads the whole file of filedescriptor fd. If the file is too big
  * to keep in core, a partial sort is done, and the output is stashed somewhere.
  */
-void get_file(int fd, off_t size)
-/* int fd;			   Fd of file to read */
-/* register off_t size;		   Size of file */
+void get_file(fd, size)
+int fd;				/* Fd of file to read */
+register off_t size;		/* Size of file */
 {
   register int i;
   int rest;			/* Rest in memory */
@@ -521,7 +489,7 @@ void get_file(int fd, off_t size)
 	in_core = FALSE;
 	i = last_line();	/* Get pos. of last line */
 	mem_top[i] = '\0';	/* Truncate */
-	lseek(fd, (off_t) (i - MEMORY_SIZE), SEEK_CUR);	/* Do this next time */
+	(void) lseek(fd, (off_t) (i - MEMORY_SIZE), SEEK_CUR);	/* Do this next time */
 	size = size - rest - i + MEMORY_SIZE;	/* Calculate rest */
 	cur_pos = mem_top;	/* Reset mem */
 	sort();			/* Sort core */
@@ -531,14 +499,14 @@ void get_file(int fd, off_t size)
 	mread(fd, cur_pos, rest);
 	cur_pos = cur_pos + rest;	/* Reassign cur_pos */
 	*cur_pos = '\0';
-	close(fd);	/* File completed */
+	(void) close(fd);	/* File completed */
   }
 }
 
 /* Last_line () find the last line in core and retuns the offset from the top
  * of the memory.
  */
-int last_line(void)
+int last_line()
 {
   register int i;
 
@@ -550,7 +518,8 @@ int last_line(void)
 /* Print_table prints the line table in the given file_descriptor. If the fd
  * equals ERROR, it opens a temp_file itself.
  */
-void print_table(int fd)
+void print_table(fd)
+int fd;
 {
   register char **line_ptr;	/* Ptr in line_table */
   register char *ptr;		/* Ptr to line */
@@ -575,14 +544,15 @@ void print_table(int fd)
 	} while (*ptr++ != '\n');
   }
   mwrite(fd, out_buffer, index);/* Flush buffer */
-  close(fd);		/* Close file */
+  (void) close(fd);		/* Close file */
   nr_of_files++;		/* Increment nr_of_files to merge */
 }
 
 /* File_name () returns the nr argument from the argument list, or a uniq
  * filename if the nr is too high, or the arguments were not merge files.
  */
-char *file_name(int nr)
+char *file_name(nr)
+register int nr;
 {
   if (only_merge) {
 	if (args_offset + nr < args_limit) return argptr[args_offset + nr];
@@ -594,21 +564,27 @@ char *file_name(int nr)
 }
 
 /* Mread () performs a normal read (), but checks the return value. */
-void mread(int fd, char *address, int bytes)
+void mread(fd, address, bytes)
+int fd;
+char *address;
+register int bytes;
 {
   if (read(fd, address, bytes) < 0 && bytes != 0)
 	error(TRUE, "Read error", NIL_PTR);
 }
 
 /* Mwrite () performs a normal write (), but checks the return value. */
-void mwrite(int fd, char *address, int bytes)
+void mwrite(fd, address, bytes)
+int fd;
+char *address;
+register int bytes;
 {
   if (write(fd, address, bytes) != bytes && bytes != 0)
 	error(TRUE, "Write error", NIL_PTR);
 }
 
 /* Sort () sorts the input in memory starting at mem_top. */
-void sort(void)
+void sort()
 {
   register char *ptr = mem_top;
   register int count = 0;
@@ -644,7 +620,8 @@ void sort(void)
 }
 
 /* Sort_table () sorts the line table consisting of nel elements. */
-void sort_table(int nel)
+void sort_table(nel)
+register int nel;
 {
   char *tmp;
   register int i;
@@ -662,7 +639,8 @@ void sort_table(int nel)
 }
 
 /* Incr () increments the heap. */
-void incr(int si, int ei)
+void incr(si, ei)
+register int si, ei;
 {
   char *tmp;
 
@@ -682,12 +660,11 @@ void incr(int si, int ei)
  * puts it into the line1 and line2 arrays. It then calls the cmp () routine
  * with the field describing the arguments.
  */
-
-
-int cmp_fields(char *el1, char *el2)
+int cmp_fields(el1, el2)
+register char *el1, *el2;
 {
-  static char line1[LINE_SIZE], line2[LINE_SIZE];
   int i, ret;
+  char line1[LINE_SIZE], line2[LINE_SIZE];
 
   for (i = 0; i < field_cnt; i++) {	/* Setup line parts */
 	build_field(line1, &fields[i + 1], el1);
@@ -707,10 +684,10 @@ int cmp_fields(char *el1, char *el2)
 /* Build_field builds a new line from the src as described by the field.
  * The result is put in dest.
  */
-void build_field(char *dest, FIELD * field, char *src)
-/* char *dest;			   Holds result */
-/* FIELD *field;		   Field description */
-/* char *src;			   Source line */
+void build_field(dest, field, src)
+char *dest;			/* Holds result */
+register FIELD *field;		/* Field description */
+register char *src;		/* Source line */
 {
   char *begin = src;		/* Remember start location */
   char *last;			/* Pointer to end location */
@@ -735,15 +712,17 @@ void build_field(char *dest, FIELD * field, char *src)
 }
 
 /* Skip_fields () skips nf fields of the line pointed to by str. */
-char *skip_fields(char *str, int nf)
+char *skip_fields(str, nf)
+register char *str;
+int nf;
 {
   while (nf-- > 0) {
 	if (separator == '\0') {/* Means ' ' or '\t' */
-		while (*str != ' ' && *str != '\t' && *str != '\n') str++;
 		while (table[*str] & BLANK) str++;
+		while (*str != ' ' && *str != '\t' && *str != '\n') str++;
 	} else {
+		while (*str == separator) str++;
 		while (*str != separator && *str != '\n') str++;
-		if (*str == separator) str++;
 	}
   }
   return str;			/* Return pointer to indicated field */
@@ -753,7 +732,8 @@ char *skip_fields(char *str, int nf)
  * has been made. if so, it calls cmp_fields (). If not, it calls cmp () and
  * reversed the return value if the (global) reverse flag is set.
  */
-int compare(char *el1, char *el2)
+int compare(el1, el2)
+register char *el1, *el2;
 {
   int ret;
 
@@ -766,7 +746,9 @@ int compare(char *el1, char *el2)
 /* Cmp () is the actual compare routine. It compares according to the
  * description given in the field pointer.
  */
-int cmp(unsigned char *el1, unsigned char *el2, FIELD *field)
+int cmp(el1, el2, field)
+register unsigned char *el1, *el2;
+FIELD *field;
 {
   int c1, c2;
 
@@ -830,8 +812,9 @@ int cmp(unsigned char *el1, unsigned char *el2, FIELD *field)
  * Digits compares () the two strings that point to a number of digits followed
  * by an optional decimal point.
  */
-int digits(char *str1, char *str2, BOOL check_sign)
-/* check_sign;			   True if sign must be checked */
+int digits(str1, str2, check_sign)
+register char *str1, *str2;
+BOOL check_sign;		/* True if sign must be checked */
 {
   BOOL negative = FALSE;	/* True if negative numbers */
   int diff, pow, ret;
@@ -895,7 +878,8 @@ int digits(char *str1, char *str2, BOOL check_sign)
 /* Files_merge () merges all files as indicated by nr_of_files. Merging goes
  * in numbers of files that can be opened at the same time. (OPEN_FILES)
  */
-void files_merge(int file_cnt) /* Nr_of_files to merge */
+void files_merge(file_cnt)
+register int file_cnt;		/* Nr_of_files to merge */
 {
   register int i;
   int limit;
@@ -918,11 +902,12 @@ void files_merge(int file_cnt) /* Nr_of_files to merge */
 
 /* Cleanup mess */
   i = (only_merge) ? args_limit - args_offset : 0;
-  while (i < file_cnt) unlink(file_name(i++));
+  while (i < file_cnt) (void) unlink(file_name(i++));
 }
 
 /* Merge () merges the files between start_file and limit_file. */
-void merge(int start_file, int limit_file)
+void merge(start_file, limit_file)
+int start_file, limit_file;
 {
   register MERGE *smallest;	/* Keeps track of smallest line */
   register int i;
@@ -948,11 +933,11 @@ void merge(int start_file, int limit_file)
 	smallest->buffer = msbrk(buf_size);
 	smallest->line = msbrk(LINE_SIZE);
 	smallest->cnt = smallest->read_chars = 0;
-	read_line(smallest);	/* Read first line */
+	(void) read_line(smallest);	/* Read first line */
   }
 
   if (disabled == file_cnt) {	/* Couldn't open files */
-	close(out_fd);
+	(void) close(out_fd);
 	return;
   }
 
@@ -990,14 +975,15 @@ void merge(int start_file, int limit_file)
 /* Put_line () prints the line into the out_fd filedescriptor. If line equals
  * NIL_PTR, the out_fd is flushed and closed.
  */
-void put_line(char *line)
+void put_line(line)
+register char *line;
 {
   static int index = 0;		/* Index in out_buffer */
 
   if (line == NIL_PTR) {	/* Flush and close */
 	mwrite(out_fd, out_buffer, index);
 	index = 0;
-	close(out_fd);
+	(void) close(out_fd);
 	return;
   }
   do {				/* Fill out_buffer with line */
@@ -1014,7 +1000,9 @@ void put_line(char *line)
  * If this fails, it returns the next merg structure which file_descriptor is
  * still open. If none could be found, a NIL structure is returned.
  */
-MERGE *print(MERGE *merg, int file_cnt) /* Nr of files that are being merged */
+MERGE *print(merg, file_cnt)
+register MERGE *merg;
+int file_cnt;			/* Nr of files that are being merged */
 {
   register int i;
 
@@ -1038,7 +1026,8 @@ MERGE *print(MERGE *merg, int file_cnt) /* Nr of files that are being merged */
  * done in buf_size bytes.
  * Lines longer than LINE_SIZE are silently truncated.
  */
-int read_line(MERGE *merg)
+int read_line(merg)
+register MERGE *merg;
 {
   register char *ptr = merg->line - 1;	/* Ptr buf that will hold line */
 
@@ -1047,7 +1036,7 @@ int read_line(MERGE *merg)
 	if (merg->cnt == merg->read_chars) {	/* Read new buffer */
 		if ((merg->read_chars =
 		     read(merg->fd, merg->buffer, buf_size)) <= 0) {
-			close(merg->fd);	/* OOPS */
+			(void) close(merg->fd);	/* OOPS */
 			merg->fd = ERROR;
 			disabled++;
 			return ERROR;
@@ -1068,7 +1057,9 @@ int read_line(MERGE *merg)
 /* Skip_lines () skips all same lines in all the files currently being merged.
  * It returns a pointer to the merge struct containing the smallest line.
  */
-MERGE *skip_lines(MERGE *smallest, int file_cnt)
+MERGE *skip_lines(smallest, file_cnt)
+register MERGE *smallest;
+int file_cnt;
 {
   register int i;
   int ret;
@@ -1089,9 +1080,10 @@ MERGE *skip_lines(MERGE *smallest, int file_cnt)
 }
 
 /* Uniq_lines () prints only the uniq lines out of the fd of the merg struct. */
-void uniq_lines(MERGE *merg)
+void uniq_lines(merg)
+register MERGE *merg;
 {
-  static char lastline[LINE_SIZE];	/* Buffer to hold last line */
+  char lastline[LINE_SIZE];	/* Buffer to hold last line */
 
   for (;;) {
 	put_line(merg->line);	/* Print this line */
@@ -1110,10 +1102,12 @@ void uniq_lines(MERGE *merg)
  * Check_file () checks if a file is sorted in order according to the arguments
  * given in main ().
  */
-void check_file(int fd, char *file)
+void check_file(fd, file)
+int fd;
+char *file;
 {
   register MERGE *merg;		/* 1 file only */
-  static char lastline[LINE_SIZE];	/* Save last line */
+  char lastline[LINE_SIZE];	/* Save last line */
   register int ret;		/* ret status of compare */
 
   if (fd == 0) file = "stdin";
@@ -1148,7 +1142,8 @@ void check_file(int fd, char *file)
 }
 
 /* Length () returns the length of the argument line including the linefeed. */
-int length(char *line)
+int length(line)
+register char *line;
 {
   register int i = 1;		/* Add linefeed */
 
@@ -1157,13 +1152,15 @@ int length(char *line)
 }
 
 /* Copy () copies the src line into the dest line including linefeed. */
-void copy(char *dest, char *src)
+void copy(dest, src)
+register char *dest, *src;
 {
   while ((*dest++ = *src++) != '\n');
 }
 
 /* Msbrk() does a sbrk() and checks the return value. */
-char *msbrk(int size)
+char *msbrk(size)
+register int size;
 {
   register char *address;
 
@@ -1173,17 +1170,19 @@ char *msbrk(int size)
 }
 
 /* Mbrk() does a brk() and checks the return value. */
-void mbrk(char *address)
+void mbrk(address)
+char *address;
 {
-  if (brk(address) == -1) error(TRUE, "Cannot reset memory", NIL_PTR);
+  if (brk(address) < 0) error(TRUE, "Cannot reset memory", NIL_PTR);
 }
 
-void catch(int dummy) /* to satisfy the prototype */
+void catch(dummy)
+int dummy;			/* to satisfy the prototype */
 {
   register int i;
 
-  // signal(SIGINT, SIG_IGN);
+  signal(SIGINT, SIG_IGN);
   only_merge = FALSE;
-  for (i = 0; i < 26; i++) unlink(file_name(i));
+  for (i = 0; i < 26; i++) (void) unlink(file_name(i));
   exit(2);
 }

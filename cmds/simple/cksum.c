@@ -9,12 +9,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <stdlib.h>
 #include <stdio.h>
-
-unsigned long strncrc(unsigned char *b, int n, unsigned long s);
-int main(int argc, char *argv[]);
-void crc(int fd, char *name);
 
 int error;
 
@@ -76,13 +71,19 @@ unsigned long crctab[] = {
 	  0x2a6f2b94, 0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
 };
 
+_PROTOTYPE(int main, (int argc, char **argv));
+_PROTOTYPE(void crc, (int fd, char *name));
+_PROTOTYPE(unsigned long strncrc, (unsigned char *b, int n, unsigned long s));
 
 static int aux;
 
 /* Routine straight out of 4.9.10 */
-unsigned long strncrc(unsigned char *b, int n, unsigned long s)
+unsigned long strncrc(b, n, s)
+register unsigned char *b;	/* byte sequence to checksum */
+register int n;			/* length of sequence */
+register unsigned long s;	/* initial checksum value */
 {
-  int i;
+  register int i;
 
   while (n-- > 0) {
 	/* Compute the index to the crc table */
@@ -102,7 +103,9 @@ unsigned long strncrc(unsigned char *b, int n, unsigned long s)
 }
 
 /* Main module. No options switches allowed, none parsed. */
-int main(int argc, char *argv[])
+int main(argc, argv)
+int argc;
+char *argv[];
 {
   argc--;
   error = 0;
@@ -110,11 +113,13 @@ int main(int argc, char *argv[])
 	crc(0, (char *) 0);
   else
 	for (argv++; argc--; argv++) crc(open(*argv, O_RDONLY), *argv);
-  exit(error);
+  return(error);
 }
 
 /* Compute crc and size of input file descriptor. */
-void crc(int fd, char *name)
+void crc(fd, name)
+int fd;
+char *name;
 {
   off_t f_size;
   unsigned long crc;

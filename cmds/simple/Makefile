@@ -6,12 +6,21 @@ CFLAGS+= -Wl,--oformat=elf32-m68k -T ../../misc/userland_program.ld
 CFLAGS+= -Wl,-Map=$@.map
 CFLAGS+= -nostdinc -nostdlib
 CFLAGS+= -L $(GCCLIBDIR) -L $(LIBDIR)
-LDLIBS= -lc -lgcc
+LDLIBS= -lc -lgcc -lcurses
 
-BINS= banner basename cal cat chmem cksum cmp comm cp crc cut date dd du \
-      dirname echo ed expand fgrep fopen fred grep hd head init less ln ls \
-      mkdir more mv od pwd rev rm rmdir roff sed setdate size sh sleep \
-      sort split sync tail tar tee touch tr uniq usertests wc foo
+BINS= animals ascii banner basename btoa cal \
+      cat cgrep chmem chmod chown cksum cmp col \
+      comic comm compress cp cut date dd decomp16 dhrystone dirname \
+      diskcheck diskusage du dw echo expand expr factor fgrep file \
+      fix fold fortune getlf grep gres \
+      head hd hyphenate id ifdef init inodes join kill last less leave ln \
+      look lpr ls machine mkdir mkfifo mknod mkproto \
+      modem od paste pr prep \
+      printenv proto rev rmdir \
+      roff sed setdate sh shar size sleep sort split strings stty sum \
+      swapfs sync tail tee test touch traverse tr \
+      treecmp tset tsort ttt tty umount unexpand uniq unshar update \
+      users uud uue vol wc whatsnew whoami who width 
 
 # Lose the implicit compilation rule
 %: %.c
@@ -23,12 +32,7 @@ BINS= banner basename cal cat chmem cksum cmp comm cp crc cut date dd du \
 	m68k-elf-objcopy -O binary $< $@
 	m68k-elf-objdump --disassemble -S $< > $@.dis
 
-# Some programs need more memory than 64K
 all: $(BINS)
-	../../tools/chmem 128 ls
-	../../tools/chmem 128 cal
-	../../tools/chmem 256 sed
-	../../tools/chmem 128 setdate
 	cp $(BINS) ../../build/bin
 
 clean:

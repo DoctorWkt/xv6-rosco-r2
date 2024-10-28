@@ -1,753 +1,1098 @@
-/*  A very simple, lite, version of tar for the Fuzix project
+/* tar - tape archiver			Author: Michiel Huisjes */
 
-    Copyright(c) 2015 Brett M Gordon
+/* Usage: tar [cxt][vo][F][f] tapefile [files]
+ *
+ * attempt to make tar to conform to POSIX 1003.1
+ * disclaimer: based on an old (1986) POSIX draft.
+ * Klamer Schutte, 20/9/89
+ *
+ * Changes:
+ *  Changed to handle the original minix-tar format.	KS 22/9/89
+ *  Changed to handle BSD4.3 tar format.		KS 22/9/89
+ *  Conform to current umask if not super-user.		KS 22/9/89
+ *  Update usage message to show f option		KS 22/9/89
+ *
+ *
+ * 1)	tar will back itself up, should check archive inode num(&dev) and
+  then check the target inode number. In verbose mode, issue
+  warning, in all cases ignore target.
+  marks@mgse		Mon Sep 25 10:38:58 CDT 1989
+  	added global varaibles, made changes to main() and add_file();
+  maks@mgse Mon Sep 25 12:09:20 CDT 1989
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+   2)	tar will not notice that a file has changed size while it was being
+  backed up. should issue warning.
+  marks@mgse		Mon Sep 25 10:38:58 CDT 1989
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
-    NOTES:
-    * cannot extract symbolic links
-    * hardlinks are added as normal files
-
-    TODO:
-    * remove stdio.h gunk
+   3)	the 'f' option was not documented in usage[].
+  marks@mgse		Mon Sep 25 12:03:20 CDT 1989
+  	changed both usage[] defines. Why are there two (one is commented out)?
+  	( deleted by me (was done twice) -- KS, 2/10/89 )
+ *
+ *  changed stat on tar_fd to an fstat				KS 2/10/89
+ *  deleted mkfifo() code -- belongs in libc.a			KS 2/10/89
+ *  made ar_dev default to -1 : an illegal device		KS 2/10/89
+ *  made impossible to chown if normal user			KS 2/10/89
+ *  if names in owner fields not known use numirical values	KS 2/10/89
+ *  creat with mask 666 -- use umask if to liberal		KS 2/10/89
+ *  allow to make directories as ../directory			KS 2/10/89
+ *  allow tmagic field to end with a space (instead of \0)	KS 2/10/89
+ *  correct usage of tmagic field 				KS 3/10/89
+ *  made mkdir() to return a value if directory == "."  	KS 3/10/89
+ *  made lint complains less (On a BSD 4.3 system)		KS 3/10/89
+ *  use of directory(3) routines				KS 3/10/89
+ *  deleted use of d_namlen selector of struct dirent		KS 18/10/89
+ *  support mknod4(2)						EC 7/7/90
+ *  forget inodes when link count expires			EC 6/4/91
+ *  don't remember directories *twice*!
+ *  added 'p' flag to ignore umask for normal user		KJB 6/10/92
+ *
+ * Bugs:
+ *  verbose mode is not reporting consistent
+ *  code needs cleanup
+ *  prefix field is not used
+ *  timestamp of a directory will not be correct if there are files to be
+ *  unpacked in the directory
+ *	(add you favorite bug here (or two (or three (or ...))))
 */
 
-#include <stdio.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdint.h>
-#include <fcntl.h>
+#include <sys/types.h>
 #include <sys/stat.h>
-// #include <getopt.h>
-#include <dirent.h>
-#include <time.h>
-#include <errno.h>
+#include <fcntl.h>
+#include <pwd.h>
+#include <grp.h>
+#include <tar.h>
+#include <stdarg.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <utime.h>
+#include <sys/wait.h>
+#include <stdio.h>		/* need NULL */
 
-/* tar header format, with ustar extension */
-struct header {
-	char name[100];
-	char mode[8];
-	char uid[8];
-	char gid[8];
-	char size[12];
-	char mtime[12];
-	char cksum[8];
-	char type;
-	char lname[100];
-	char ustar[6];
-	char version[2];
-	char uname[32];
-	char gname[32];
-	char major[8];
-	char minor[8];
-	char prefix[155];
-	char pad[12];
-} h;
+#define	POSIX_COMP		/* POSIX compatible */
+#define DIRECT_3		/* use directory(3) routines */
 
-
-uint8_t buffer[512];		/* buffer for data blocks */
-int infile;			/* input file: a tar file */
-int outfile;			/* output file: a tar file */
-int verbose;			/* verbose flag */
-int uflag;			/* ustar flag */
-int bf = 1;                     /* blocking factor */
-char *rec;                      /* alloced record buffer */
-char *recptr;                   /* ptr to next write */
-char *recend;                   /* ptr to end of buffer */
-int recz;                       /* size of record in bytes */
-char *ofile = NULL;		/* pointer to archive name from cmd line */
-char key = 0;			/* key mode of command (t,x,c) */
-int noreplace = 0;		/* replace old files? */
-int cksum = 1;			/* don't worry about cksums */
-struct stat astat;		/* stat of archive file */
-
-
-/* read blk from record */
-void blkread(void *buf) {
-	int ret;
-	if (recptr == recend) {
-		ret = read(infile, rec, recz);
-		if (ret < recz) {
-			fprintf(stderr,"wrong blocking factor\n");
-			exit(1);
-		}
-		recptr = rec;
-	}
-	memcpy(buf,recptr,512);
-	recptr += 512;
-}
-
-/* write a block to record */
-int blkwrite(char *buf) {
-	int ret;
-	memcpy(recptr, buf, 512);
-	recptr += 512;
-	if (recptr == recend) {
-		ret = write(outfile, rec, recz);
-		if (ret < recz) {
-			fprintf(stderr,"wrong blocking factor\n");
-			exit(1);
-		}
-		recptr = rec;
-	}
-	return 512;
-}
-
-/* flush any partial record */
-int blkflush(void) {
-	if (recptr != rec) {
-		bzero(recptr, recend - recptr);
-		return write(outfile, rec, recz);
-	}
-	return 0;
-}
-
-/* Return a number from an octal string */
-static uint32_t b8get(char *ptr, unsigned int n)
-{
-	uint32_t ret = 0;
-	while (*ptr && n) {
-		ret *= 8;
-		ret += (*ptr++) - '0';
-		n--;
-	}
-	return ret;
-}
-
-/* Put a number in octal to string */
-static void b8put(uint32_t x, char *ptr)
-{
-	int digit;
-
-	*--ptr = 0;
-	while (x) {
-		digit = x & 7;
-		x /= 8;
-		*--ptr = '0' + digit;
-	}
-}
-
-/* Print filename for error reporting */
-static void pname(void)
-{
-	fprintf(stderr, "%s ", h.name);
-	perror("");
-}
-
-
-/* Change owner/group of file to match tar file */
-static void my_chown(void)
-{
-#if 0
-	int x = chown(h.name, b8get(h.uid, 8),
-		      b8get(h.gid, 8));
-	if (x < 0)
-		pname();
+#ifdef _MINIX
+#include <blocksize.h>
+#define MKNOD(p,M,m,s) mknod4(p,M,m, (long)s)
+#else
+#define MKNOD(p,M,m,s) mknod(p,M,m)
 #endif
-}
 
+#ifdef DIRECT_3
+#ifndef BSD
+/* To all minix users: i am sorry, developed this piece of code on a
+ * BSD system. KS 18/10/89 */
+#include <dirent.h>
+#define	direct	dirent		/* stupid BSD non-POSIX compatible name! */
+#else				/* BSD */
+#include <sys/dir.h>
+#include <dir.h>
+#endif				/* BSD */
+#endif				/* DIRECT_3 */
 
-/* Change mod of file to match tar file */
-static void my_chmod(void)
-{
-#if 0
-	int x = chmod(h.name, b8get(h.mode, 8));
-	if (x < 0)
-		pname();
+#ifdef S_IFIFO
+#define	HAVE_FIFO		/* have incorporated Simon Pooles' changes */
 #endif
+#ifdef S_IFLNK
+#define HAVE_SYMLINK
+#endif
+
+typedef char BOOL;
+#define TRUE	1
+#define FALSE	0
+
+#define STRING_SIZE	256	/* string buffer size */
+#define HEADER_SIZE	TBLOCK
+#define NAME_SIZE	NAMSIZ
+/* #define BLOCK_BOUNDARY	 20 -- not in POSIX ! */
+
+typedef union hblock HEADER;
+
+/* Make the MINIX member names overlap to the POSIX names */
+#define	m_name		name
+#define m_mode		mode
+#define m_uid		uid
+#define m_gid		gid
+#define m_size		size
+#define	m_time		mtime
+#define	m_checksum	chksum
+#define	m_linked	typeflag
+#define	m_link		linkname
+#define	hdr_block	dummy
+#define	m		header
+#define	member		dbuf
+
+#if 0				/* original structure -- see tar.h for new
+			 * structure */
+typedef union {
+  char hdr_block[HEADER_SIZE];
+  struct m {
+	char m_name[NAME_SIZE];
+	char m_mode[8];
+	char m_uid[8];
+	char m_gid[8];
+	char m_size[12];
+	char m_time[12];
+	char m_checksum[8];
+	char m_linked;
+	char m_link[NAME_SIZE];
+  } member;
+} HEADER;
+
+#endif
+
+/* Structure used to note links */
+struct link {
+  ino_t ino;
+  dev_t dev;
+  nlink_t nlink;
+  struct link *next;
+  char name[1];
+} *link_top = NULL;
+
+HEADER header;
+
+#define INT_TYPE	(sizeof(header.member.m_uid))
+#define LONG_TYPE	(sizeof(header.member.m_size))
+
+#define MKDIR1		"/bin/mkdir"
+#define MKDIR2		"/usr/bin/mkdir"
+
+#define NIL_HEADER	((HEADER *) 0)
+#define NIL_PTR		((char *) 0)
+#define TBLOCK_SIZE	TBLOCK
+
+#define flush()		print(NIL_PTR)
+
+BOOL show_fl, creat_fl, ext_fl;
+
+int tar_fd;
+/* Char usage[] = "Usage: tar [cxt] tarfile [files]."; */
+char usage[] = "Usage: tar [cxt][vo][F][f] tarfile [files].";
+char io_buffer[TBLOCK_SIZE];
+char path[NAME_SIZE];
+char pathname[NAME_SIZE];
+int force_flag = 0;
+#ifdef ORIGINAL_DEFAULTS
+int chown_flag = 1;
+int verbose_flag = 1;
+#else
+int chown_flag = 0;
+int verbose_flag = 0;
+#endif
+
+/* Make sure we don't tar ourselves. marks@mgse Mon Sep 25 12:06:28 CDT 1989 */
+ino_t ar_inode;			/* archive inode number	 */
+dev_t ar_dev;			/* archive device number */
+
+int total_blocks;
+int u_mask;			/* one's complement of current umask */
+
+#define block_size()	(int) ((convert(header.member.m_size, LONG_TYPE) \
+  + (long) TBLOCK_SIZE - 1) / (long) TBLOCK_SIZE)
+
+_PROTOTYPE(int main, (int argc, char **argv));
+_PROTOTYPE(void error, (char *s1, char *s2));
+_PROTOTYPE(BOOL get_header, (void));
+_PROTOTYPE(void tarfile, (void));
+_PROTOTYPE(void skip_entry, (void));
+_PROTOTYPE(void extract, (char *file));
+_PROTOTYPE(void do_chown, (char *file));
+_PROTOTYPE(void timestamp, (char *file));
+_PROTOTYPE(void copy, (char *file, int from, int to, long bytes));
+_PROTOTYPE(long convert, (char str[], int type));
+_PROTOTYPE(int make_dir, (char *dir_name));
+_PROTOTYPE(int checksum, (void));
+_PROTOTYPE(int is_dir, (char *file));
+_PROTOTYPE(char *path_name, (char *file));
+_PROTOTYPE(void add_path, (char *name));
+_PROTOTYPE(void add_file, (char *file));
+_PROTOTYPE(void verb_print, (char *s1, char *s2));
+_PROTOTYPE(void add_close, (int fd));
+_PROTOTYPE(int add_open, (char *file, struct stat * st));
+_PROTOTYPE(void make_header, (char *file, struct stat * st));
+_PROTOTYPE(void is_added, (struct stat * st, char *file));
+_PROTOTYPE(void is_deleted, (struct stat * st));
+_PROTOTYPE(char *is_linked, (struct stat * st));
+_PROTOTYPE(void clear_header, (void));
+_PROTOTYPE(void adjust_boundary, (void));
+_PROTOTYPE(void mread, (int fd, char *address, int bytes));
+_PROTOTYPE(void mwrite, (int fd, char *address, int bytes));
+_PROTOTYPE(void print, (char *str));
+_PROTOTYPE(char *num_out, (long number));
+_PROTOTYPE(void string_print, (char *buffer, char *fmt,...));
+
+void error(s1, s2)
+char *s1, *s2;
+{
+  string_print(NIL_PTR, "%s %s\n", s1, s2 ? s2 : "");
+  flush();
+  exit(1);
 }
 
-static void printusage(void)
+int main(argc, argv)
+int argc;
+register char *argv[];
 {
-	fprintf(stderr, "usage: tar [-cbkxntv] [-f archive] [file]...\n");
-	exit(1);
-}
+  register char *mem_name;
+  register char *ptr;
+  struct stat st;
+  int i;
 
-/* skip data blocks of regular type file */
-static void skip(void)
-{
-	uint32_t size = b8get(h.size, 12);
-	uint32_t count = size / 512;
-	uint16_t rem = size % 512;
+  if (argc < 3) error(usage, NIL_PTR);
 
-	if (h.type == 0 || h.type == '0') {
-		off_t x;
-		if (rem)
-			count++;
-		x = lseek(infile, count * 512, SEEK_CUR);
-		if (x < 0) {
-			pname();
-			exit(1);
-		}
-
+  for (ptr = argv[1]; *ptr; ptr++) {
+	switch (*ptr) {
+	    case 'c':	creat_fl = TRUE;	break;
+	    case 'x':	ext_fl = TRUE;	break;
+	    case 't':	show_fl = TRUE;	break;
+	    case 'v':		/* verbose output  -Dal */
+		verbose_flag = !verbose_flag;
+		break;
+	    case 'o':		/* chown/chgrp files  -Dal */
+		chown_flag = TRUE;
+		break;
+	    case 'F':		/* IGNORE ERRORS  -Dal */
+		force_flag = TRUE;
+		break;
+	    case 'f':		/* standard U*IX usage -KS */
+		break;
+	    case 'p':		/* restore file modes right, ignore umask. */
+		(void) umask(0);
+		break;
+	    default:	error(usage, NIL_PTR);
 	}
+  }
+
+  if (creat_fl + ext_fl + show_fl != 1) error(usage, NIL_PTR);
+
+  if (strcmp(argv[2], "-") == 0)/* only - means stdin/stdout - KS */
+	tar_fd = creat_fl ? 1 : 0;	/* '-' means used
+					 * stdin/stdout  -Dal */
+  else
+	tar_fd = creat_fl ? creat(argv[2], 0666) : open(argv[2], O_RDONLY);
+
+  if (tar_fd < 0) error("Cannot open ", argv[2]);
+
+  if (geteuid()) {		/* check if super-user */
+	int save_umask;
+	save_umask = umask(0);
+	u_mask = ~save_umask;
+	umask(save_umask);
+	chown_flag = TRUE;	/* normal user can't chown */
+  } else
+	u_mask = ~0;		/* don't restrict if 'privileged utility' */
+
+  ar_dev = -1;			/* impossible device nr */
+  if (creat_fl) {
+	if (tar_fd > 1 && fstat(tar_fd, &st) < 0)
+		error("Can't stat ", argv[2]);	/* will never be here,
+						 * right? */
+	else {			/* get archive inode & device	 */
+		ar_inode = st.st_ino;	/* save files inode	 */
+		ar_dev = st.st_dev;	/* save files device	 */
+	}			/* marks@mgse Mon Sep 25 11:30:45 CDT 1989 */
+
+	for (i = 3; i < argc; i++) {
+		add_file(argv[i]);
+		path[0] = '\0';
+	}
+	adjust_boundary();
+  } else if (ext_fl) {
+	/* Extraction code moved here from tarfile() MSP */
+	while (get_header()) {
+		mem_name = header.member.m_name;
+		if (is_dir(mem_name)) {
+			for (ptr = mem_name; *ptr; ptr++);
+			*(ptr - 1) = '\0';
+			header.dbuf.typeflag = '5';
+		}
+		for (i = 3; i < argc; i++)
+			if (!strncmp(argv[i], mem_name, strlen(argv[i])))
+				break;
+		if (argc == 3 || (i < argc)) {
+			extract(mem_name);
+		} else if (header.dbuf.typeflag == '0' ||
+			   header.dbuf.typeflag == 0 ||
+			   header.dbuf.typeflag == ' ')
+			skip_entry();
+		flush();
+	}
+  } else
+	tarfile();		/* tarfile() justs prints info. now MSP */
+
+  flush();
+  return(0);
 }
 
-/* Calculate sum of header */
-static uint32_t cksum_calc(void)
+BOOL get_header()
 {
-	uint32_t acc = 0;
-	unsigned char *ptr = (unsigned char *) h.name;
-	while (ptr != (unsigned char *) h.cksum)
-		acc += *ptr++;
-	acc += 32 * 8;
-	ptr = (unsigned char *)&(h.type);
-	while (ptr != (unsigned char *) h.pad)
-		acc += *ptr++;
-	return acc;
+  register int check;
+
+  mread(tar_fd, (char *) &header, sizeof(header));
+  if (header.member.m_name[0] == '\0') return FALSE;
+
+  if (force_flag)		/* skip checksum verification  -Dal */
+	return TRUE;
+
+  check = (int) convert(header.member.m_checksum, INT_TYPE);
+
+  if (check != checksum()) error("Tar: header checksum error.", NIL_PTR);
+
+  return TRUE;
 }
 
+/* Tarfile() just lists info about archive now; as of the t flag. */
+/* Extraction has been moved into main() as that needs access to argv[] */
 
-/* Prints information in header to stdout (if applicable) */
-static void printheader(void)
+void tarfile()
 {
-	char pad[11];
-	int pindex = 10;
-	unsigned int m;
-	int x;
+  register char *mem_name;
 
-	pad[10] = 0;
+  while (get_header()) {
+	mem_name = header.member.m_name;
+	string_print(NIL_PTR, "%s%s", mem_name,
+		     (verbose_flag ? " " : "\n"));
+	switch (header.dbuf.typeflag) {
+	    case '1':
+		verb_print("linked to", header.dbuf.linkname);
+		break;
+	    case '2':
+		verb_print("symbolic link to", header.dbuf.linkname);
+		break;
+	    case '6':	verb_print("", "fifo");	break;
+	    case '3':
+	    case '4':
+		if (verbose_flag) {
+			char sizebuf[TSIZLEN + 1];
 
-	/* don't print if creating to stdout */
-	if (!ofile && key == 'c')
+			strncpy(sizebuf, header.dbuf.size, (size_t) TSIZLEN);
+			sizebuf[TSIZLEN] = 0;
+			string_print(NIL_PTR,
+#ifdef _MINIX
+				     "%s special file major %s minor %s size %s\n",
+#else
+			      "%s special file major %s minor %s\n",
+#endif
+				     (header.dbuf.typeflag == '3' ?
+				      "character" : "block"),
+				     header.dbuf.devmajor,
+				     header.dbuf.devminor,
+				     sizebuf);
+		}
+		break;
+	    case '0':		/* official POSIX */
+	    case 0:		/* also mentioned in POSIX */
+	    case ' ':		/* ofetn used */
+		if (!is_dir(mem_name)) {
+			if (verbose_flag)
+				string_print(NIL_PTR, "%d tape blocks\n",
+					     block_size());
+			skip_entry();
+			break;
+		} else		/* FALL TROUGH */
+	    case '5':
+			verb_print("", "directory");
+		break;
+	    default:
+		string_print(NIL_PTR, "not recogised item %d\n",
+			     header.dbuf.typeflag);
+	}
+	flush();
+  }
+}
+
+void skip_entry()
+{
+  register int blocks = block_size();
+
+  while (blocks--) (void) read(tar_fd, io_buffer, TBLOCK_SIZE);
+}
+
+void extract(file)
+register char *file;
+{
+  register int fd;
+  char *pd1, *pd2;		/* walk thru failed directory path */
+
+  switch (header.dbuf.typeflag) {
+      case '1':			/* Link */
+	if (link(header.member.m_link, file) < 0)
+		string_print(NIL_PTR, "Cannot link %s to %s\n",
+			     header.member.m_link, file);
+	else if (verbose_flag)
+		string_print(NIL_PTR, "Linked %s to %s\n",
+			     header.member.m_link, file);
+	return;
+      case '5':			/* directory */
+	if (make_dir(file) == 0) {
+		do_chown(file);
+		verb_print("created directory", file);
+	}			/* no else: mkdir will print a message if it
+			 * fails */
+	return;
+      case '3':			/* character special */
+      case '4':			/* block special */
+	{
+		int dmajor, dminor, mode, size;
+		char sizebuf[TSIZLEN + 1];
+
+		dmajor = (int) convert(header.dbuf.devmajor, INT_TYPE);
+		dminor = (int) convert(header.dbuf.devminor, INT_TYPE);
+		mode = (header.dbuf.typeflag == '3' ? S_IFCHR : S_IFBLK);
+		strncpy(sizebuf, header.dbuf.size, (size_t) TSIZLEN);
+		sizebuf[TSIZLEN] = 0;
+		if (convert(header.dbuf.size, LONG_TYPE) % BLOCK_SIZE != 0)
+			string_print(NIL_PTR,
+			"Warning: %s not a multiple of BLOCK_SIZE\n",
+				     sizebuf);
+		size = (int) (convert(header.dbuf.size, LONG_TYPE) / BLOCK_SIZE);
+		if (MKNOD(file, mode, (dmajor << 8 | dminor), size) == 0) {
+			if (verbose_flag) string_print(NIL_PTR,
+#ifdef _MINIX
+					     "made %s special file major %s minor %s size %s\n",
+#else
+					     "made %s special file major %s minor %s\n",
+#endif
+				      (header.dbuf.typeflag == '3' ?
+				       "character" : "block"),
+					     header.dbuf.devmajor,
+					     header.dbuf.devminor,
+					     sizebuf);
+			do_chown(file);
+		}
+		else 
+		{
+			string_print(NIL_PTR,
+#ifdef _MINIX
+					     "cannot make %s special file major %s minor %s size %s\n",
+#else
+					     "cannot make %s special file major %s minor %s\n",
+#endif
+				      (header.dbuf.typeflag == '3' ?
+				       "character" : "block"),
+					     header.dbuf.devmajor,
+					     header.dbuf.devminor,
+					     sizebuf);
+		}
 		return;
-
-	/* print verbosely */
-	if (verbose && key == 't') {
-		/* print type */
-		switch (h.type) {
-		case '0':
-		case 0:
-			printf("-");
-			break;
-		case '1':
-			printf("h");
-			break;
-		case '2':
-			printf("s");
-			break;
-		case '3':
-			printf("c");
-			break;
-		case '4':
-			printf("b");
-			break;
-		case '5':
-			printf("d");
-			break;
-		case '6':
-			printf("f");
-			break;
-		default:
-			printf("?");
-			break;
-		}
-		/* print mode */
-		m = b8get(h.mode, 8);
-		for (x = 0; x < 3; x++) {
-			if (m & 1)
-				pad[--pindex] = 'x';
-			else
-				pad[--pindex] = '-';
-			m = m / 2;
-			if (m & 1)
-				pad[--pindex] = 'w';
-			else
-				pad[--pindex] = '-';
-			m = m / 2;
-
-			if (m & 1)
-				pad[--pindex] = 'r';
-			else
-				pad[--pindex] = '-';
-			m = m / 2;
-		}
-		printf(&(pad[pindex]));
-		/* print uid gid */
-		printf(" %4ld %4ld", b8get(h.uid, 8), b8get(h.gid, 8));
-		/* print file size */
-		printf(" %8ld ", b8get(h.size, 12));
-		/* print maj/min */
-
-		/* This make binary big... disabling */
-		/*
-		   printf( " %2ld,%2ld", b8get( h.major, 8 ),
-		   b8get( h.minor, 8 ) );
-		   {
-		   char *s;
-		   time_t time=b8get( h.mtime, 12 );
-		   s=&( ctime( &time )[4] );
-		   s[16]=0;
-		   printf( " %-12s", s );
-		   }
-		 */
-
 	}
-	if (key == 't' || verbose)
-		printf("%s\n", h.name);
+      case '2':			/* symbolic link */
+#ifdef HAVE_SYMLINK
+	if (symlink(header.member.m_link, file) < 0)
+		string_print(NIL_PTR, "Cannot make symbolic link %s to %s\n",
+			     header.member.m_link, file);
+	else if (verbose_flag)
+		string_print(NIL_PTR, "Symbolic link %s to %s\n",
+			     header.member.m_link, file);
+	return;
+#endif
+      case '7':			/* contiguous file -- what is this (KS) */
+	print("Not implemented file type\n");
+	return;			/* not implemented, but break out */
+#ifdef HAVE_FIFO
+      case '6':			/* fifo */
+	if (mkfifo(file, 0) == 0) {	/* is chmod'ed in do_chown */
+		do_chown(file);
+		verb_print("made fifo", file);
+	} else
+		string_print(NIL_PTR, "Can't make fifo %s\n", file);
+	return;
+#endif
+  }
+
+  /* Create regular file.  If failure, try to make missing directories. */
+  if ((fd = creat(file, 0600)) < 0) {
+	pd1 = file;
+	while ((pd2 = index(pd1, '/')) > (char *) 0) {
+		*pd2 = '\0';
+		if (access(file, 1) < 0)
+			if (mkdir(file, 0777) < 0) {
+				string_print(NIL_PTR, "Cannot mkdir %s\n", file);
+				return;
+			} else
+				string_print(NIL_PTR, "Made directory %s\n", file);
+		*pd2 = '/';
+		pd1 = ++pd2;
+	}
+	if ((fd = creat(file, 0600)) < 0) {
+		string_print(NIL_PTR, "Cannot create %s\n", file);
+		return;
+	}
+  }
+  copy(file, tar_fd, fd, convert(header.member.m_size, LONG_TYPE));
+  (void) close(fd);
+
+  do_chown(file);
+}
+
+void do_chown(file)
+char *file;
+{
+  int uid = -1, gid = -1;	/* these are illegal ??? -- KS */
+
+  if (!chown_flag) {		/* set correct owner and group  -Dal */
+	if (header.dbuf.magic[TMAGLEN] == ' ')
+		header.dbuf.magic[TMAGLEN] = '\0';	/* some tars out there
+							 * ... */
+	if (strncmp(TMAGIC, header.dbuf.magic, (size_t) TMAGLEN)) {
+		struct passwd *pwd;
+		struct group *grp;
+
+		pwd = getpwnam(header.dbuf.uname);
+		if (pwd != NULL) uid = pwd->pw_uid;
+		grp = getgrnam(header.dbuf.gname);
+		if (grp != NULL) gid = grp->gr_gid;
+	}
+	if (uid == -1) uid = (int) convert(header.member.m_uid, INT_TYPE);
+	if (gid == -1) gid = (int) convert(header.member.m_gid, INT_TYPE);
+	chown(file, uid, gid);
+  }
+  chmod(file, u_mask & (int) convert(header.member.m_mode, INT_TYPE));
+
+  /* Should there be a timestamp if the chown failes? -- KS */
+  timestamp(file);
+
+}
+
+void timestamp(file)
+char *file;
+{
+  struct utimbuf buf;
+
+  buf.modtime = buf.actime = convert(header.dbuf.mtime, LONG_TYPE);
+  utime(file, &buf);
+}
+
+void copy(file, from, to, bytes)
+char *file;
+int from, to;
+register long bytes;
+{
+  register int rest;
+  int blocks = (int) ((bytes + (long) TBLOCK_SIZE - 1) / (long) TBLOCK_SIZE);
+
+  if (verbose_flag)
+	string_print(NIL_PTR, "%s, %d tape blocks\n", file, blocks);
+
+  while (blocks--) {
+	(void) read(from, io_buffer, TBLOCK_SIZE);
+	rest = (bytes > (long) TBLOCK_SIZE) ? TBLOCK_SIZE : (int) bytes;
+	mwrite(to, io_buffer, (to == tar_fd) ? TBLOCK_SIZE : rest);
+	bytes -= (long) rest;
+  }
+}
+
+long convert(str, type)
+char str[];
+int type;
+{
+  register long ac = 0L;
+  register int i;
+
+  for (i = 0; i < type; i++) {
+	if (str[i] >= '0' && str[i] <= '7') {
+		ac <<= 3;
+		ac += (long) (str[i] - '0');
+	}
+  }
+
+  return ac;
+}
+
+int make_dir(dir_name)
+char *dir_name;
+{
+  register int pid, w;
+  int ret;
+
+  /* Why not allow to mkdir(../directory)? -- changed now	KS 2/10/89 */
+  if ((dir_name[0] == '.') && (dir_name[1] == '\0')) return 0;
+
+  if ((pid = fork()) < 0) error("Cannot fork().", NIL_PTR);
+
+  if (pid == 0) {
+	execl(MKDIR1, "mkdir", dir_name, (char *) 0);
+	execl(MKDIR2, "mkdir", dir_name, (char *) 0);
+	error("Cannot execute mkdir.", NIL_PTR);
+  }
+  do {
+	w = wait(&ret);
+  } while (w != -1 && w != pid);
+
+  return ret;
+}
+
+int checksum()
+{
+  register char *ptr = header.member.m_checksum;
+  register int ac = 0;
+
+  while (ptr < &header.member.m_checksum[INT_TYPE]) *ptr++ = ' ';
+
+  ptr = header.hdr_block;
+  while (ptr < &header.hdr_block[TBLOCK_SIZE]) ac += *ptr++;
+
+  return ac;
+}
+
+int is_dir(file)
+register char *file;
+{
+  while (*file++ != '\0');
+
+  return(*(file - 2) == '/');
 }
 
 
-/* process a file name
-   This is called recursively as new subdirs are found */
-static void storedir(char *name)
+char *path_name(file)
+register char *file;
 {
-	struct stat s;
-	int fd;
-	int ret;
-	DIR *dirstream;
-	struct dirent *dir;
-	char cname[100];
-	uint32_t count = 0;
-	uint16_t rem;
 
-	/* stat file */
-	ret = stat(name, &s);
-	if (ret < 0) {
-		fprintf(stderr, "%s ", name);
-		perror("");
-		return;
+  string_print(pathname, "%s%s", path, file);
+  return pathname;
+}
+
+void add_path(name)
+register char *name;
+{
+  register char *path_ptr = path;
+
+  while (*path_ptr) path_ptr++;
+
+  if (name == NIL_PTR) {
+	while (*path_ptr-- != '/');
+	while (*path_ptr != '/' && path_ptr != path) path_ptr--;
+	if (*path_ptr == '/') path_ptr++;
+	*path_ptr = '\0';
+  } else {
+	while (*name) {
+		if (path_ptr == &path[NAME_SIZE])
+			error("Pathname too long", NIL_PTR);
+		*path_ptr++ = *name++;
 	}
+	*path_ptr++ = '/';
+	*path_ptr = '\0';
+  }
+}
 
-	/* check to make sure we're not trying to archive
-	   the archive */
-	if ((s.st_ino == astat.st_ino) && (s.st_dev == astat.st_dev))
-		return;
+/*
+ *	add a file to the archive
+*/
+void add_file(file)
+register char *file;
+{
+  struct stat st;
+  char *linkname;
+  register int fd = -1;
+  char namebuf[16];		/* -Dal */
+  char cwd[129];		/* -KS */
 
-	if (S_ISREG(s.st_mode)) {
-		count = s.st_size / 512;
-		rem = s.st_size % 512;
-		if (rem)
-			count++;
-	}
-
-	/* build a new header in mem */
-	bzero(h.name, sizeof(h));
-	memset(h.mode, '0', 57);
-	memset(h.major, '0', 16);
-	strcpy(h.name, name);
-	b8put(s.st_mode & 07777, h.mode + 8);
-	b8put(s.st_uid, h.uid + 8);
-	b8put(s.st_gid, h.gid + 8);
-	b8put(s.st_size, h.size + 12);
-	b8put(s.st_mtime, h.mtime + 12);
-	switch (s.st_mode & S_IFMT) {
-	case S_IFREG:
-		h.type = '0';
+#ifdef HAVE_SYMLINK
+  if (lstat(file, &st) < 0) {
+#else
+  if (stat(file, &st) < 0) {
+#endif
+	string_print(NIL_PTR, "Cannot find %s\n", file);
+	return;
+  }
+  if (st.st_dev == ar_dev && st.st_ino == ar_inode) {
+	string_print(NIL_PTR, "Cannot tar current archive file (%s)\n", file);
+	return;
+  }				/* marks@mgse Mon Sep 25 12:06:28 CDT 1989 */
+  if ((fd = add_open(file, &st)) < 0) {
+	string_print(NIL_PTR, "Cannot open %s\n", file);
+	return;
+  }
+  make_header(path_name(file), &st);
+  if ((linkname = is_linked(&st)) != NULL) {
+	strncpy(header.dbuf.linkname, linkname, (size_t) NAMSIZ);
+	header.dbuf.typeflag = '1';
+	if (verbose_flag) string_print(NIL_PTR, "linked %s to %s\n",
+			     header.dbuf.linkname, file);
+	string_print(header.member.m_checksum, "%I ", checksum());
+	mwrite(tar_fd, (char *) &header, sizeof(header));
+  } else {
+	is_added(&st, file);
+	switch (st.st_mode & S_IFMT) {
+	    case S_IFREG:
+		header.dbuf.typeflag = '0';
+		string_print(header.member.m_checksum, "%I ", checksum());
+		mwrite(tar_fd, (char *) &header, sizeof(header));
+		copy(path_name(file), fd, tar_fd, (long) st.st_size);
 		break;
-	case S_IFDIR:
-		h.type = '5';
-		if (S_ISDIR(s.st_mode))
-			h.name[strlen(name)] = '/';
-		break;
-	case S_IFCHR:
-		h.type = '3';
-		b8put(s.st_rdev >> 8, h.major + 8);
-		b8put(s.st_rdev & 255, h.minor + 8);
-		break;
-	case S_IFBLK:
-		h.type = '4';
-		b8put(s.st_rdev >> 8, h.major + 8);
-		b8put(s.st_rdev & 255, h.minor + 8);
-		break;
-	case S_IFIFO:
-		h.type = '6';
-		break;
-	default:
-		fprintf(stderr, "unhandled file type error\n");
-		exit(1);
-	}
-
-	strcpy(h.ustar, "ustar");
-	b8put(0, h.version + 2);
-
-	/* calculate checksum */
-	h.cksum[7] = 32;
-	b8put(cksum_calc(), h.cksum + 7);
-
-	/* write header to file */
-	ret = blkwrite(h.name);
-	if (ret < 512) {
-		pname();
-		exit(1);
-	}
-	printheader();
-
-	switch (s.st_mode & S_IFMT) {
-	case S_IFREG:
-		/* open subject file */
-		fd = open(name, O_RDONLY);
-		if (fd < 0) {
-			fprintf(stderr, "%s ", name);
-			perror("");
-			return;
-		}
-		while (count--) {
-			ret = read(fd, buffer, 512);
-			if (ret < 0) {
-				fprintf(stderr, "cannot read source file\n");
-				exit(1);
-			}
-			if (ret < 512)
-				bzero(buffer + ret, 512 - ret);
-			ret = blkwrite((char *)buffer);
-		}
-		close(fd);
-		break;
-	case S_IFDIR:
-		/* open the directory */
-		if ((dirstream = opendir(name)) == NULL) {
-			pname();
-			break;
-		}
-		while ((dir = readdir(dirstream)) != NULL) {
-			/* dont arch .. or . */
-			if (!strcmp(dir->d_name, ".") || !strcmp(dir->d_name, "..")
-			    )
-				continue;
-			strncpy(cname, name, 100);
-			strncat(cname, "/", 100);
-			strncat(cname, dir->d_name, 100);
+	    case S_IFDIR:
+		header.dbuf.typeflag = '5';
+		string_print(header.member.m_checksum, "%I ", checksum());
+		mwrite(tar_fd, (char *) &header, sizeof(header));
+		if (NULL == getcwd(cwd, (int) sizeof cwd))
+			string_print(NIL_PTR, "Error: cannot getcwd()\n");
+		else if (chdir(file) < 0)
+			string_print(NIL_PTR, "Cannot chdir to %s\n", file);
+		else {
+			verb_print("read directory", file);
+			add_path(file);
+#ifdef	DIRECT_3
 			{
-				/* save state of files */
-				uint32_t tell = telldir(dirstream);
-				closedir(dirstream);
-				/* recursive call to this dir */
-				storedir(cname);
-				/* restore state of files */
-				if ((dirstream = opendir(name)) == NULL) {
-					pname();
-					break;
-				}
-				seekdir(dirstream, tell);
+				DIR *dirp;
+				struct direct *dp;
+				struct stat dst;
+
+				dirp = opendir(".");
+				while (NULL != (dp = readdir(dirp)))
+					if (strcmp(dp->d_name, ".") == 0)
+						is_linked(&st);
+					else if (strcmp(dp->d_name, "..") == 0) {
+						if (stat("..", &dst) == 0)
+							is_linked(&dst);
+					} else {
+						strcpy(namebuf, dp->d_name);
+						add_file(namebuf);
+					}
+				closedir(dirp);
 			}
-		}
-		closedir(dirstream);
-		break;
-	}
-}
-
-
-/* list all the files in an archive */
-static void list(void)
-{
-	int zcount = 2;
-
-
-	if (ofile)
-		infile = open(ofile, O_RDONLY);
-	else
-		infile = 0;
-	if (infile < 0) {
-		perror("Cannot open archive");
-		exit(1);
-	}
-
-	while (1) {
-		blkread(&h);
-		/* check for zero block */
-		if (h.name[0] == 0) {
-			if (!--zcount)
-				exit(0);
-			continue;
-		}
-
-		uflag = !strncmp(h.ustar, "ustar", 5);
-
-		printheader();
-
-		skip();
-	}			/* block while */
-}
-
-/* Attempt to make all parent directories */
-static void makeparents(char *path)
-{
-	static char c[100];
-	char *s = path;
-	int l;
-	while (1){
-		char *e = index(s,'/');
-		if (!e)
-			return;
-		l = e - path;
-		memcpy(c,path,l);
-		c[l] = 0;
-		mkdir(c,0755);
-		s = e + 1;
-	}
-}
-
-/* Extract all file in archive */
-static void extract(char *argv[])
-{
-	int x;
-	int zcount = 2;
-
-	if (ofile)
-		infile = open(ofile, O_RDONLY);
-	else
-		infile = 0;
-
-	if (infile < 0) {
-		fprintf(stderr, "cannot open infile\n");
-		exit(1);
-	}
-
-	while (1) {
-		blkread(&h);
-		/* check for zero block */
-		if (h.name[0] == 0) {
-			if (!--zcount)
-				exit(0);
-			continue;
-		}
-
-		/* check cksum */
-		if (cksum && (cksum_calc() != b8get(h.cksum, 8))) {
-			fprintf(stderr, "%s: bad chksum\n", h.name);
-			exit(1);
-		}
-
-		/* remove trailing '/' */
-		while (h.name[strlen(h.name) - 1] == '/')
-			h.name[strlen(h.name) - 1] = 0;
-
-		/* does entry match any cmd line args? */
-		if (argv[optind]) {
-			for (x = optind; argv[x]; x++) {
-				if (!strcmp(h.name, argv[x]))
-					goto cont;
-			}
-			skip();
-			continue;
-		}
-	      cont:
-		printheader();
-
-		uflag = !strncmp(h.ustar, "ustar", 5);
-
-		makeparents(h.name);
-
-		switch (h.type) {
-		case '1':	/* a hard link */
-			x = link(h.lname, h.name);
-			if (x < 0) {
-				pname();
-				break;
-			}
-			my_chmod();
-			my_chown();
-			break;
-		case '2':	/* a soft link */
-			fprintf(stderr, "soft links not supported\n");
-			break;
-#if 0
-		case '3':	/* a charactor device */
-			x = mknod(h.name, b8get(h.mode, 8) | S_IFCHR, (b8get(h.major, 8) << 8) + b8get(h.minor, 8));
-			if (x > 0) {
-				pname();
-				break;
-			}
-			my_chown();
-			break;
-		case '4':	/* a block device */
-			x = mknod(h.name, b8get(h.mode, 8) | S_IFBLK, (b8get(h.major, 8) << 8) + b8get(h.minor, 8));
-			if (x < 0) {
-				pname();
-				break;
-			}
-			my_chown();
-			break;
-#endif
-		case '5':	/* a directory */
-			x = mkdir(h.name, b8get(h.mode, 8));
-			if (x) {
-				pname();
-				break;
-			}
-			my_chown();
-			break;
-#if 0
-		case '6':	/* a FIFO */
-			x = mkfifo(h.name, b8get(h.mode, 8));
-			if (x < 0) {
-				pname();
-				break;
-			}
-			my_chown();
-			break;
-#endif
-		case '0':	/* regular file */
-		case 0:
+#else
 			{
 				int i;
-				uint16_t rem;
-				/* get a printable size */
-				uint32_t size = b8get(h.size, 12);
-				uint32_t count;
-				/* count how many blocks we need */
-				count = size / 512;
-				rem = size % 512;
-				/* check for existance of file */
-				if (noreplace && !access(h.name, F_OK)) {
-					errno = EEXIST;
-					pname();
-					continue;
+				struct direct dir;
+				struct stat dst;
+
+				for (i = 0; i < 2; i++) {	/* . and .. */
+					mread(fd, &dir, sizeof(dir));
+					if (strcmp(dir.d_name, ".") == 0)
+						is_linked(&st);
+					else if (strcmp(dir.d_name, "..") == 0) {
+						if (stat("..", &dst) == 0)
+							is_linked(&dst);
+					} else
+						break;
 				}
-				/* open output file */
-				outfile = open(h.name, O_CREAT | O_WRONLY | O_TRUNC, 0700);
-				if (outfile < 0) {
-					pname();
-					break;
-				}
-				/* send buffers to file */
-				for (x = 0; x < count; x++) {
-					blkread(buffer);
-					i = write(outfile, buffer, 512);
-					if (i < 512) {
-						fprintf(stderr, "cannot write out file\n");
-						exit(1);
+				while (read(fd, &dir, sizeof(dir)) == sizeof(dir))
+					if (dir.d_ino) {
+						strncpy(namebuf, dir.d_name,
+						   (size_t) DIRSIZ);
+						namebuf[DIRSIZ] = '\0';
+						add_file(namebuf);
 					}
-				}
-				if (rem) {
-					blkread(buffer);
-					i = write(outfile, buffer, rem);
-					if (i < rem) {
-						fprintf(stderr, "cannot write out file\n");
-						exit(1);
-					}
-				}
-				close(outfile);
-				my_chmod();
-				my_chown();
-				continue;
 			}
-			break;
-		default:
-			fprintf(stderr, "unsupported flag\n");
+#endif
+			chdir(cwd);
+			add_path(NIL_PTR);
+			*file = 0;
+		}
+		break;
+#ifdef HAVE_SYMLINK
+	    case S_IFLNK:
+		{
+			int i;
+
+			header.dbuf.typeflag = '2';
+			verb_print("read symlink", file);
+			i = readlink(file,
+				     header.dbuf.linkname,
+				  sizeof(header.dbuf.linkname) - 1);
+			if (i < 0) {
+				string_print(NIL_PTR,
+					     "Cannot read symbolic link %s\n", file);
+				return;
+			}
+			header.dbuf.linkname[i] = 0;
+			string_print(header.member.m_checksum, "%I ", checksum());
+			mwrite(tar_fd, (char *) &header, sizeof(header));
 			break;
 		}
-	}			/* block while */
-}
+#endif
+#ifdef HAVE_FIFO
+	    case S_IFIFO:
+		header.dbuf.typeflag = '6';
+		verb_print("read fifo", file);
+		string_print(header.member.m_checksum, "%I ", checksum());
+		mwrite(tar_fd, (char *) &header, sizeof(header));
+		break;
+#endif
+	    case S_IFBLK:
+		header.dbuf.typeflag = '4';
+		if (verbose_flag) {
+			char sizebuf[TSIZLEN + 1];
 
-
-/* Create a archive */
-static void create(char *argv[])
-{
-	int x;
-
-	/* open outfile */
-	if (ofile)
-		outfile = open(ofile, O_CREAT | O_WRONLY, 0666);
-	else
-		outfile = 1;
-	if (outfile < 0) {
-		pname();
-		exit(1);
-	}
-	/* get dev / inode numbers of created tar file for comparing to
-	   added files, in order to skip adding a tar file to itself */
-	if (fstat(outfile, &astat)) {
-		pname();
-		exit(1);
-	}
-	/* put each file on cmdline to file */
-	while (argv[optind]) {
-		char *s = argv[optind++];
-		/* remove any trailing / */
-		if (s[strlen(s) - 1] == '/')
-			s[strlen(s) - 1] = 0;
-		/* remove any leading / */
-		if (s[0] == '/')
-			s = s + 1;
-		storedir(s);
-	}
-	/* write out 2 zero blocks */
-	bzero(buffer, 512);
-	x = blkwrite((char *)buffer);
-	x += blkwrite((char *)buffer);
-	if (x != 1024)
-		perror("writing end of archive");
-	/* close outfile */
-	blkflush();
-	close(outfile);
-}
-
-
-int main(int argc, char *argv[])
-{
-	int o;
-
-	ofile = getenv("TAPE");
-	
-	while ((o = getopt(argc, argv, "xtcvnkf:b:")) > 0) {
-		switch (o) {
-		case 'x':
-		case 't':
-		case 'c':
-			key = o;
-			break;
-		case 'v':
-			verbose = 1;
-			break;
-		case 'f':
-			ofile = optarg;
-			break;
-		case 'k':
-			noreplace = 1;
-			break;
-		case 'n':
-			cksum = 0;
-			break;
-		case 'b':
-			bf = atoi(optarg);
-			if (bf < 1) {
-				fprintf(stderr,"bad blocking factor\n");
-				exit(1);
-			}
-			break;
-		default:
-			printusage();
+			strncpy(sizebuf, header.dbuf.size, (size_t) TSIZLEN);
+			sizebuf[TSIZLEN] = 0;
+			string_print(NIL_PTR,
+#ifdef _MINIX
+				     "read block device %s major %s minor %s size %s\n",
+#else
+			 "read block device %s major %s minor %s\n",
+#endif
+				     file, header.dbuf.devmajor, header.dbuf.devminor, sizebuf);
 		}
-	}
-	/* setup record buffer */
-	recz = bf * 512;
-	recptr = rec = sbrk(recz);
-	if (rec == (void *)-1) {
-		fprintf(stderr,"block buffer too large\n");
-		exit(1);
-	}
-	recend = rec + recz;
-	switch (key) {
-	case 'x':
-		recptr = recend;
-		extract(argv);
+		string_print(header.member.m_checksum, "%I ", checksum());
+		mwrite(tar_fd, (char *) &header, sizeof(header));
 		break;
-	case 't':
-		recptr = recend;
-		list();
+	    case S_IFCHR:
+		header.dbuf.typeflag = '3';
+		if (verbose_flag) string_print(NIL_PTR,
+				     "read character device %s major %s minor %s\n",
+				     file, header.dbuf.devmajor, header.dbuf.devminor);
+		string_print(header.member.m_checksum, "%I ", checksum());
+		mwrite(tar_fd, (char *) &header, sizeof(header));
 		break;
-	case 'c':
-		create(argv);
-		break;
-	default:
-		fprintf(stderr, "tar: option x,c, or t must be used\n");
-		exit(1);
+	    default:
+		is_deleted(&st);
+		string_print(NIL_PTR, "Tar: %s unknown file type. Not added.\n", file);
+		*file = 0;
 	}
+  }
+
+  flush();
+  add_close(fd);
+}
+
+void verb_print(s1, s2)
+char *s1, *s2;
+{
+  if (verbose_flag) string_print(NIL_PTR, "%s: %s\n", s1, s2);
+}
+
+void add_close(fd)
+int fd;
+{
+  if (fd != 0) close(fd);
+}
+
+/*
+ *	open file 'file' to be added to archive, return file descriptor
+*/
+int add_open(file, st)
+char *file;
+struct stat *st;
+{
+  int fd;
+  if (((st->st_mode & S_IFMT) != S_IFREG) &&
+      ((st->st_mode & S_IFMT) != S_IFDIR))
 	return 0;
+  fd = open(file, O_RDONLY);
+  return fd;
+}
+
+void make_header(file, st)
+char *file;
+register struct stat *st;
+{
+  register char *ptr = header.member.m_name;
+  struct passwd *pwd;
+  struct group *grp;
+
+  clear_header();
+
+  while (*ptr++ = *file++);
+
+  if ((st->st_mode & S_IFMT) == S_IFDIR) {	/* fixed test  -Dal */
+	*(ptr - 1) = '/';
+  }
+  string_print(header.member.m_mode, "%I ", st->st_mode & 07777);
+  string_print(header.member.m_uid, "%I ", st->st_uid);
+  string_print(header.member.m_gid, "%I ", st->st_gid);
+  if (
+#ifdef _MINIX
+      (st->st_mode & S_IFMT) == S_IFBLK ||
+#endif
+      (st->st_mode & S_IFMT) == S_IFREG)
+	string_print(header.member.m_size, "%L ", st->st_size);
+  else
+	strncpy(header.dbuf.size, "0", (size_t) TSIZLEN);
+  string_print(header.member.m_time, "%L ", st->st_mtime);
+  strncpy(header.dbuf.magic, TMAGIC, (size_t) TMAGLEN);
+  header.dbuf.version[0] = 0;
+  header.dbuf.version[1] = 0;
+  pwd = getpwuid(st->st_uid);
+  strncpy(header.dbuf.uname,
+	(pwd != NULL ? pwd->pw_name : "nobody"), TUNMLEN);
+  grp = getgrgid(st->st_gid);
+  strncpy(header.dbuf.gname,
+	(grp != NULL ? grp->gr_name : "nobody"), TGNMLEN);
+  if (st->st_mode & (S_IFBLK | S_IFCHR)) {
+	string_print(header.dbuf.devmajor, "%I ", (st->st_rdev >> 8));
+	string_print(header.dbuf.devminor, "%I ", (st->st_rdev & 0xFF));
+  }
+  header.dbuf.prefix[0] = 0;
+}
+
+void is_added(st, file)
+struct stat *st;
+char *file;
+{
+  struct link *new;
+  char *name;
+
+  if ((*file == 0) || (st->st_nlink == 1)) return;
+  name = path_name(file);
+  new = (struct link *) malloc(sizeof(struct link) + strlen(name));
+  if (new == NULL) {
+	print("Out of memory\n");
+	return;
+  }
+  new->next = link_top;
+  new->dev = st->st_dev;
+  new->ino = st->st_ino;
+  new->nlink = st->st_nlink - 1;
+  strcpy(new->name, name);
+  link_top = new;
+}
+
+void is_deleted(st)
+struct stat *st;
+{
+  struct link *old;
+
+  if ((old = link_top) != NULL) {
+	link_top = old->next;
+	free(old);
+  }
+}
+
+char *is_linked(st)
+struct stat *st;
+{
+  struct link *cur = link_top;
+  struct link **pre = &link_top;
+  static char name[NAMSIZ];
+
+  while (cur != NULL)
+	if ((cur->dev != st->st_dev) || (cur->ino != st->st_ino)) {
+		pre = &cur->next;
+		cur = cur->next;
+	} else {
+		if (--cur->nlink == 0) {
+			*pre = cur->next;
+			strncpy(name, cur->name, NAMSIZ);
+			return name;
+		}
+		return cur->name;
+	}
+  return NULL;
+}
+
+void clear_header()
+{
+  register char *ptr = header.hdr_block;
+
+  while (ptr < &header.hdr_block[TBLOCK_SIZE]) *ptr++ = '\0';
+}
+
+void adjust_boundary()
+{
+  clear_header();
+  mwrite(tar_fd, (char *) &header, sizeof(header));
+#ifndef POSIX_COMP
+  while (total_blocks++ < BLOCK_BOUNDARY)
+	mwrite(tar_fd, (char *) &header, sizeof(header));
+#else
+  mwrite(tar_fd, (char *) &header, sizeof(header));
+#endif
+  (void) close(tar_fd);
+}
+
+void mread(fd, address, bytes)
+int fd, bytes;
+char *address;
+{
+  if (read(fd, address, bytes) != bytes) error("Tar: read error.", NIL_PTR);
+}
+
+void mwrite(fd, address, bytes)
+int fd, bytes;
+char *address;
+{
+  if (write(fd, address, bytes) != bytes)
+	error("Tar: write error.", NIL_PTR);
+
+  total_blocks++;
+}
+
+char output[TBLOCK_SIZE];
+void print(str)			/* changed to use stderr rather than stdout
+			 * -Dal */
+register char *str;
+{
+  static int indx = 0;
+
+  if (str == NIL_PTR) {
+	write(2, output, indx);
+	indx = 0;
+	return;
+  }
+  while (*str) {
+	output[indx++] = *str++;
+	if (indx == TBLOCK_SIZE) {
+		write(2, output, TBLOCK_SIZE);
+		indx = 0;
+	}
+  }
+}
+
+char *num_out(number)
+register long number;
+{
+  static char num_buf[12];
+  register int i;
+
+  for (i = 11; i--;) {
+	num_buf[i] = (number & 07) + '0';
+	number >>= 3;
+  }
+
+  return num_buf;
+}
+
+/*VARARGS2*/
+#if __STDC__
+void string_print(char *buffer, char *fmt,...)
+#else
+void string_print(buffer, fmt)
+char *buffer;
+char *fmt;
+#endif
+{
+  va_list args;
+  register char *buf_ptr;
+  char *scan_ptr;
+  char buf[STRING_SIZE];
+  BOOL pr_fl, i;
+
+  if (pr_fl = (buffer == NIL_PTR)) buffer = buf;
+
+  va_start(args, fmt);
+  buf_ptr = buffer;
+  while (*fmt) {
+	if (*fmt == '%') {
+		fmt++;
+		switch (*fmt++) {
+		    case 's':
+			scan_ptr = (char *) (va_arg(args, char *));
+			break;
+		    case 'I':
+			scan_ptr = num_out((long) (va_arg(args, int)));
+			for (i = 0; i < 5; i++) scan_ptr++;
+			break;
+		    case 'L':
+			scan_ptr = num_out((long) va_arg(args, long));
+			break;
+		    case 'd':
+			scan_ptr = num_out((long) va_arg(args, int));
+			while (*scan_ptr == '0') scan_ptr++;
+			scan_ptr--;
+			break;
+		    default:	scan_ptr = "";
+		}
+		while (*buf_ptr++ = *scan_ptr++);
+		buf_ptr--;
+	} else
+		*buf_ptr++ = *fmt++;
+  }
+  *buf_ptr = '\0';
+
+  if (pr_fl) print(buffer);
+  va_end(args);
 }

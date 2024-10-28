@@ -24,6 +24,6 @@ struct passwd *getpwnam(const char *name) {
   return(getpwent());
 }
 
-struct passwd *getpwuid(uid_t uid) {
+struct passwd *getpwuid(Uid_t uid) {
   return(getpwent());
 }

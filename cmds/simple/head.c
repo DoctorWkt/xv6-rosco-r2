@@ -1,33 +1,17 @@
 /* head - print the first few lines of a file	Author: Andy Tanenbaum */
 
-#include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <stdio.h>
 
 #define DEFAULT 10
 
-void do_file(int n, FILE *f)
-{
-  int c;
+_PROTOTYPE(int main, (int argc, char **argv));
+_PROTOTYPE(void do_file, (int n, FILE *f));
+_PROTOTYPE(void usage, (void));
 
-  /* Print the first 'n' lines of a file. */
-  while (n) switch (c = getc(f)) {
-	    case EOF:
-		return;
-	    case '\n':
-		--n;
-	    default:	putc((char) c, stdout);
-	}
-}
-
-
-void usage(void)
-{
-  fprintf(stderr, "Usage: head [-n] [file ...]\n");
-  exit(1);
-}
-
-int main(int argc, char *argv[])
+int main(argc, argv)
+int argc;
+char *argv[];
 {
   FILE *f;
   int n, k, nfiles;
@@ -62,5 +46,30 @@ int main(int argc, char *argv[])
 	k++;
 	if (k < argc) printf("\n");
   }
-  exit(0);
+  return(0);
+}
+
+
+
+void do_file(n, f)
+int n;
+FILE *f;
+{
+  int c;
+
+  /* Print the first 'n' lines of a file. */
+  while (n) switch (c = getc(f)) {
+	    case EOF:
+		return;
+	    case '\n':
+		--n;
+	    default:	putc((char) c, stdout);
+	}
+}
+
+
+void usage()
+{
+  fprintf(stderr, "Usage: head [-n] [file ...]\n");
+  exit(1);
 }

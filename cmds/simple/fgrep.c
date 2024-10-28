@@ -21,8 +21,6 @@
  *	Multiple strings per command line are supported, eg.
  *		fgrep -e str1 -e str2 *.c
  *	Instead of a filename - is allowed, meaning standard input.
- *
- * ANSIfied Alan Cox to make it pass sdcc
  */
 
 /* #include <ansi.h> */
@@ -68,17 +66,20 @@ char no_arg[] = "argument missing";
 extern char *optarg;
 extern int optind;
 
-int main(int argc, char *argv[]);
-char *search_str(test_str *ts);
-int fill_buffer(void);
-void usage(void);
-void failure(const char *mesg);
-void file_open(void);
-char *get_line(void);
-void string_file(void);
-void add_string(char *str);
+_PROTOTYPE(int main, (int argc, char **argv));
+_PROTOTYPE(char *search_str, (test_str * ts));
+_PROTOTYPE(int fill_buffer, (void));
+_PROTOTYPE(void failure, (char *mesg));
+_PROTOTYPE(void file_open, (void));
+_PROTOTYPE(void usage, (void));
+_PROTOTYPE(char *get_line, (void));
+_PROTOTYPE(void string_file, (void));
+_PROTOTYPE(void add_string, (char *str));
+_PROTOTYPE(int getopt, (int argc, char **argv, char *optstring));
 
-int main(int argc, char *argv[])
+int main(argc, argv)
+int argc;
+char **argv;
 {
   char *line;
   int c;
@@ -152,7 +153,7 @@ int main(int argc, char *argv[])
   return found_one ? 0 : 1;
 }
 
-void usage(void)
+void usage()
 {
   fprintf(stderr,
 	"Usage: %s -chlnsv <[-e string] ... [-f file] ... | string> [file] ...\n",
@@ -160,14 +161,16 @@ void usage(void)
   exit(2);
 }
 
-void failure(const char *mesg)
+void failure(mesg)
+char *mesg;
 {
   fprintf(stderr, "%s: %s\n", prog_name, mesg);
   exit(1);
 }
 
 /* Add a string to search for to the global linked list `strings'. */
-void add_string(char *str)
+void add_string(str)
+char *str;
 {
   test_str *ts;
   int len;
@@ -190,12 +193,12 @@ void add_string(char *str)
 }
 
 /* Open a file for reading.  Initialize input buffer pointers. */
-void file_open(void)
+void file_open()
 {
   /* Use stdin if no file arguments are given on the command line. */
   if (optarg == (char *) NULL || strcmp(optarg, "-") == 0) {
 	fd_in = 0;
-	optarg = (char *)"stdin";
+	optarg = "stdin";
   } else if ((fd_in = open(optarg, O_RDONLY)) == -1) {
 	fprintf(stderr, "%s: can't open %s\n", prog_name, optarg);
 	exit(1);
@@ -211,7 +214,7 @@ void file_open(void)
  * Round off the available input to whole lines.
  * Return the number of valid input characters.
  */
-int fill_buffer(void)
+int fill_buffer()
 {
   char *bufp;
   int size;
@@ -249,7 +252,7 @@ int fill_buffer(void)
 }
 
 /* Read strings from a file.  Give duplicates to add_string(). */
-void string_file(void)
+void string_file()
 {
   char *str, *p;
 
@@ -270,7 +273,8 @@ void string_file(void)
  * Return a pointer to the match or a pointer beyond end of input if no match.
  * Record how far the input is scanned.
  */
-char *search_str(test_str *ts)
+char *search_str(ts)
+test_str *ts;
 {
   char *bufp, *prevbufp, *s;
 
@@ -297,7 +301,7 @@ char *search_str(test_str *ts)
  * Or, if the -v option is used, the next line without a match.
  * Or NULL on EOF.
  */
-char *get_line(void)
+char *get_line()
 {
   test_str *ts;
   char *match, *line;

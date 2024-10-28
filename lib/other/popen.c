@@ -1,22 +1,31 @@
 /*
  * popen - open a pipe
  */
+/* $Header: /home/wkt/Minix_1.6.25/lib/other/RCS/popen.c,v 1.2 2024/10/26 21:50:47 wkt Exp $ */
 
 #include	<sys/types.h>
-#include	<sys/wait.h>
-#include	<unistd.h>
-#include	<stdlib.h>
 #include	<limits.h>
 #include	<errno.h>
 #include	<signal.h>
 #include	<stdio.h>
 
+#if	defined(__BSD4_2)
+union wait {
+	int	w_status;
+};
+typedef union wait wait_arg;
+#else
 typedef int wait_arg;
+#endif	/* __BSD4_2 */
 
-static int pids[_POSIX_OPEN_MAX];
+#include	"../stdio/loc_incl.h"
+
+static int pids[OPEN_MAX];
 
 FILE *
-popen(const char *command, const char *type)
+popen(command, type)
+_CONST char *command;
+_CONST char *type;
 {
 	int piped[2];
 	int Xtype = *type == 'r' ? 0 : *type == 'w' ? 1 : 2;
@@ -28,9 +37,9 @@ popen(const char *command, const char *type)
 	
 	if (pid == 0) {
 		/* child */
-		int *p;
+		register int *p;
 
-		for (p = pids; p < &pids[_POSIX_OPEN_MAX]; p++) {
+		for (p = pids; p < &pids[OPEN_MAX]; p++) {
 			if (*p) close((int)(p - pids));
 		}
 		close(piped[Xtype]);
@@ -45,20 +54,59 @@ popen(const char *command, const char *type)
 	return fdopen(piped[Xtype], type);
 }
 
+#if	defined(__BSD4_2)
+#define	ret_val	status.w_status
+#else
+#define	ret_val	status
+#endif
+
 int
 pclose(stream)
 FILE *stream;
 {
-	int ret_val = 0;
 	int fd = fileno(stream);
 	wait_arg status;
 	int wret;
 
+#ifdef _ANSI
+	void (*intsave)(int) = signal(SIGINT, SIG_IGN);
+	void (*quitsave)(int) = signal(SIGQUIT, SIG_IGN);
+#else
+	void (*intsave)() = signal(SIGINT, SIG_IGN);
+	void (*quitsave)() = signal(SIGQUIT, SIG_IGN);
+#endif
 	fclose(stream);
 	while ((wret = wait(&status)) != -1) {
 		if (wret == pids[fd]) break;
 	}
 	if (wret == -1) ret_val = -1;
+	signal(SIGINT, intsave);
+	signal(SIGQUIT, quitsave);
 	pids[fd] = 0;
 	return ret_val;
 }
+
+#if	defined(__USG)
+int dup(int fildes);
+
+static int
+dup2(oldd, newd)
+int oldd, newd;
+{
+	int i = 0, fd, tmp;
+	int fdbuf[_NFILES];
+
+	/* ignore the error on the close() */
+	tmp = errno; (void) close(newd); errno = tmp;
+	while ((fd = dup(oldd)) != newd) {
+		if (fd == -1) break;
+		fdbuf[i++] = fd;
+	}
+	tmp = errno;
+	while (--i >= 0) {
+		close(fdbuf[i]);
+	}
+	errno = tmp;
+	return -(fd == -1);
+}
+#endif	/* __USG */

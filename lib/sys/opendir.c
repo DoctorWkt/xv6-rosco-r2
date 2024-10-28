@@ -1,5 +1,6 @@
 /* Functions to read from a directory. 		Author: Warren Toomey */
 
+#include <sys/types.h>
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
@@ -54,8 +55,8 @@ struct dirent *readdir(DIR *dirp)
 
   // Copy over into BSD struct
   strncpy(d->d_name, x.name, DIRSIZ);
-  d->d_namlen= strlen(d->d_name);
-  d->d_fileno= x.inum;
+  // d->d_namlen= strlen(d->d_name);
+  d->d_ino= x.inum;
   return(d);
 }
 

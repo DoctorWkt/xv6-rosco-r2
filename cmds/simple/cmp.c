@@ -1,27 +1,27 @@
 /* cmp - compare two files		Author: Kees J. Bot.  */
 
-#include <sys/types.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
+#include "sys/types.h"
+#include "fcntl.h"
+#include "stdlib.h"
+#include "unistd.h"
+#include "stdio.h"
 
-int main(int argc, char **argv);
-int cmp(int fd1, int fd2);
-void fatal(char *label);
-void Usage(void);
-
+_PROTOTYPE(void fatal, (char *label));
+_PROTOTYPE(int cmp, (int fd1, int fd2));
+_PROTOTYPE(void Usage, (void));
+_PROTOTYPE(int main, (int argc, char **argv));
 
 #define BLOCK	4096
 
 static int loud = 0, silent = 0;
 static char *name1, *name2;
 
-int main(int argc, char **argv)
+int main(argc, argv)
+int argc;
+char **argv;
 {
   int fd1, fd2;
+  char *opt;
 
   /* Process the '-l' or '-s' option. */
   while (argc > 1 && argv[1][0] == '-' && argv[1][1] != 0) {
@@ -66,7 +66,8 @@ int main(int argc, char **argv)
   exit(cmp(fd1, fd2));
 }
 
-int cmp(int fd1, int fd2)
+int cmp(fd1, fd2)
+int fd1, fd2;
 {
   static char buf1[BLOCK], buf2[BLOCK];
   int n1 = 0, n2 = 0, i1 = 0, i2 = 0, c1, c2;
@@ -113,13 +114,18 @@ int cmp(int fd1, int fd2)
   return(1);
 }
 
-void fatal(char *label)
+void fatal(label)
+char *label;
 {
-  if (!silent) fprintf(stderr, "cmp: %s: %s\n", label, strerror(errno));
+  if (!silent) {
+	fprintf(stderr, "cmp: ");
+	fflush(stderr);
+	perror(label);
+  }
   exit(2);
 }
 
-void Usage(void)
+void Usage()
 {
   fprintf(stderr, "Usage: cmp [-l | -s] file1 file2\n");
   exit(2);

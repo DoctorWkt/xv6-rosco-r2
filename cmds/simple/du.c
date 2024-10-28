@@ -1,230 +1,199 @@
+/* du - report on disk usage		Author: Alistair G. Crooks */
+
 /*
- * Copyright (c) 1989 The Regents of the University of California.
- * All rights reserved.
+ *	du.c		1.1	27/5/87		agc	Joypace Ltd.
+ *			1.2	24 Mar 89	nick@nswitgould.oz
+ *			1.3	31 Mar 89	nick@nswitgould.oz
+ *			1.4	22 Feb 90	meulenbr@cst.prl.philips.nl
+ *			1.5	09 Jul 91	hp@vmars.tuwien.ac.at
+ *			1.6	01 Oct 92	kjb@cs.vu.nl
+ *			1.7	04 Jan 93	bde
  *
- * This code is derived from software contributed to Berkeley by
- * Chris Newcomb.
+ *	Copyright 1987, Joypace Ltd., London UK. All rights reserved.
+ *	This code may be freely distributed, provided that this notice
+ *	remains attached.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
+ *	du - a public domain interpretation of du(1).
  *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ *  1.2: 	Fixed bug involving 14 character long filenames
+ *  1.3:	Add [-l levels] option to restrict printing.
+ *  1.4:	Added processing of multiple arguments
+ *  1.5:	Fixed processing of multiple arguments. General cleanup.
+ *  1.6:	Use readdir
+ *  1.7:	Merged 1.5 and 1.6.
+ *		Print totals even for non-dirs at top level.
+ *		Count blocks for each dir before printing total for the dir.
+ *		Count blocks for all non-special files.
+ *		Don't clutter link buffer with directories.
+ *  TODO	Report all errors.  Count indirect blocks.  Don't forget
+ *		links.
  */
 
-#ifndef lint
-char copyright[] =
-"@(#) Copyright (c) 1989 The Regents of the University of California.\n\
- All rights reserved.\n";
-#endif /* not lint */
 
-#ifndef lint
-static char sccsid[] = "@(#)du.c	5.17 (Berkeley) 5/20/92";
-#endif /* not lint */
-
-#include <sys/param.h>
+#include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/errno.h>
-#include <dirent.h>
-#include <stdio.h>
-#include <fts.h>
-#include <string.h>
+#include <blocksize.h>
+#include <fcntl.h>
+#include <blocksize.h>
+#include <errno.h>
+#include <limits.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <dirent.h>
 
-void	 err __P((const char *, ...));
-char	*getbsize __P((char *, int *, long *));
-int	 linkchk __P((FTSENT *));
-void	 usage __P((void));
+extern char *optarg;
+extern int optind;
 
-int	kflag;
+#define	LINELEN		256
+#define	MAXALREADY	512
 
-int main(int argc, char *argv[])
+#ifdef S_IFLNK
+#define	LSTAT lstat
+#else
+#define	LSTAT stat
+#endif
+
+typedef struct {
+  int al_dev;
+  ino_t al_inum;
+} ALREADY;
+
+_PROTOTYPE(int main, (int argc, char **argv));
+_PROTOTYPE(int makedname, (char *d, char *f, char *out, int outlen));
+_PROTOTYPE(int done, (int dev, Ino_t inum));
+_PROTOTYPE(long dodir, (char *d, int thislev));
+
+char *prog;			/* program name */
+char *optstr = "asl:";		/* -a and -s arguments */
+int silent = 0;			/* silent mode */
+int all = 0;			/* all directory entries mode */
+char *startdir = ".";		/* starting from here */
+int levels = 20000;		/* # of directory levels to print */
+ALREADY already[MAXALREADY];
+int alc;
+
+
+/*
+ *	makedname - make the pathname from the directory name, and the
+ *	directory entry, placing it in out. If this would overflow,
+ *	return 0, otherwise 1.
+ */
+int makedname(d, f, out, outlen)
+char *d;
+char *f;
+char *out;
+int outlen;
 {
-	register FTS *fts;
-	register FTSENT *p;
-	register int listdirs, listfiles;
-	long blocksize;
-	int aflag, ch, ftsoptions, notused, sflag;
-	char **save;
+  char *cp;
+  int length;
 
-	ftsoptions = FTS_PHYSICAL;
-	save = argv;
-	aflag = kflag = sflag = 0;
-	while ((ch = getopt(argc, argv, "aksx")) != EOF)
-		switch(ch) {
-		case 'a':
-			aflag = 1;
-			break;
-		case 'k':
-			kflag = 1;
-			break;
-		case 's':
-			sflag = 1;
-			break;
-		case 'x':
-			ftsoptions |= FTS_XDEV;
-			break;
-		case '?':
-		default:
-			usage();
-		}
-	argv += optind;
+  length = strlen(f);
+  if (strlen(d) + length + 2 > outlen) return(0);
+  for (cp = out; *d; *cp++ = *d++);
+  if (*(cp - 1) != '/') *cp++ = '/';
+  while (length--) *cp++ = *f++;
+  *cp = '\0';
+  return(1);
+}
 
-	if (aflag) {
-		if (sflag)
-			usage();
-		listdirs = listfiles = 1;
-	} else if (sflag)
-		listdirs = listfiles = 0;
-	else {
-		listfiles = 0;
-		listdirs = 1;
+/*
+ *	done - have we encountered (dev, inum) before? Returns 1 for yes,
+ *	0 for no, and remembers (dev, inum).
+ */
+int done(dev, inum)
+int dev;
+ino_t inum;
+{
+  register ALREADY *ap;
+  register int i;
+  int ret = 0;
+
+  for (i = 0, ap = already; i < alc; ap++, i++)
+	if (ap->al_dev == dev && ap->al_inum == inum) {
+		ret = 1;
+		break;
 	}
+  if (alc < MAXALREADY) {
+	already[alc].al_dev = dev;
+	already[alc++].al_inum = inum;
+  }
+  return(ret);
+}
 
-	if (!*argv) {
-		argv = save;
-		argv[0] = ".";
-		argv[1] = NULL;
+/*
+ *	dodir - process the directory d. Return the long size (in blocks)
+ *	of d and its descendants.
+ */
+long dodir(d, thislev)
+char *d;
+int thislev;
+{
+  int maybe_print;
+  struct stat s;
+  long total;
+  char dent[LINELEN];
+  DIR *dp;
+  struct dirent *entry;
+
+  if (LSTAT(d, &s) < 0) {
+	fprintf(stderr,
+		"%s: %s: %s\n", prog, d, strerror(errno));
+    	return 0L;
+  }
+  total = (s.st_size + (BLOCK_SIZE - 1)) / BLOCK_SIZE;
+  switch (s.st_mode & S_IFMT) {
+    case S_IFDIR:
+	/* Directories should not be linked except to "." and "..", so this
+	 * directory should not already have been done.
+	 */
+	maybe_print = !silent;
+	if ((dp = opendir(d)) == NULL) break;
+	while ((entry = readdir(dp)) != NULL) {
+		if (strcmp(entry->d_name, ".") == 0 ||
+		    strcmp(entry->d_name, "..") == 0)
+			continue;
+		if (!makedname(d, entry->d_name, dent, sizeof(dent))) continue;
+		total += dodir(dent, thislev - 1);
 	}
-
-	(void)getbsize("du", &notused, &blocksize);
-	blocksize /= 512;
-
-	if ((fts = fts_open(argv, ftsoptions, NULL)) == NULL)
-		err("%s", strerror(errno));
-
-	while (p = fts_read(fts))
-		switch(p->fts_info) {
-		case FTS_D:
-			break;
-		case FTS_DP:
-			p->fts_parent->fts_number += 
-			    p->fts_number += p->fts_statp->st_blocks;
-			/*
-			 * If listing each directory, or not listing files
-			 * or directories and this is post-order of the
-			 * root of a traversal, display the total.
-			 */
-			if (listdirs || !listfiles && !p->fts_level)
-				(void)printf("%ld\t%s\n",
-				    howmany(p->fts_number, blocksize),
-				    p->fts_path);
-			break;
-		case FTS_DNR:
-		case FTS_ERR:
-		case FTS_NS:
-			(void)fprintf(stderr,
-			    "du: %s: %s\n", p->fts_path, strerror(errno));
-			break;
-		case FTS_SL:
-			if (p->fts_level == FTS_ROOTLEVEL) {
-				(void)fts_set(fts, p, FTS_FOLLOW);
-				break;
-			}
-			/* FALLTHROUGH */
-		default:
-			if (p->fts_statp->st_nlink > 1 && linkchk(p))
-				break;
-			/*
-			 * If listing each file, or a non-directory file was
-			 * the root of a traversal, display the total.
-			 */
-			if (listfiles || !p->fts_level)
-				(void)printf("%ld\t%s\n",
-				    howmany(p->fts_statp->st_blocks, blocksize),
-				    p->fts_path);
-			p->fts_parent->fts_number += p->fts_statp->st_blocks;
-		}
-	if (errno)
-		err("%s", strerror(errno));
-	exit(0);
+	closedir(dp);
+	break;
+    case S_IFBLK:
+    case S_IFCHR:
+	/* st_size for special files is not related to blocks used. */
+	total = 0;
+	/* Fall through. */
+    default:
+	if (s.st_nlink > 1 && done(s.st_dev, s.st_ino)) return 0L;
+	maybe_print = all;
+	break;
+  }
+  if (thislev >= levels || (maybe_print && thislev >= 0))
+	printf("%ld\t%s\n", total, d);
+  return(total);
 }
 
-typedef struct _ID {
-	dev_t	dev;
-	ino_t	inode;
-} ID;
-
-int
-linkchk(p)
-	register FTSENT *p;
+int main(argc, argv)
+int argc;
+char **argv;
 {
-	static ID *files;
-	static int maxfiles, nfiles;
-	register ID *fp, *start;
-	register ino_t ino;
-	register dev_t dev;
+  int c;
 
-	ino = p->fts_statp->st_ino;
-	dev = p->fts_statp->st_dev;
-	if (start = files)
-		for (fp = start + nfiles - 1; fp >= start; --fp)
-			if (ino == fp->inode && dev == fp->dev)
-				return(1);
-
-	if (nfiles == maxfiles && (files = realloc((char *)files,
-	    (u_int)(sizeof(ID) * (maxfiles += 128)))) == NULL)
-		err("%s", strerror(errno));
-	files[nfiles].inode = ino;
-	files[nfiles].dev = dev;
-	++nfiles;
-	return(0);
-}
-
-void
-usage()
-{
-	(void)fprintf(stderr, "usage: du [-a | -s] [-x] [file ...]\n");
-	exit(1);
-}
-
-#if __STDC__
-#include <stdarg.h>
-#else
-#include <varargs.h>
-#endif
-
-void
-#if __STDC__
-err(const char *fmt, ...)
-#else
-err(fmt, va_alist)
-	char *fmt;
-        va_dcl
-#endif
-{
-	va_list ap;
-#if __STDC__
-	va_start(ap, fmt);
-#else
-	va_start(ap);
-#endif
-	(void)fprintf(stderr, "du: ");
-	(void)vfprintf(stderr, fmt, ap);
-	va_end(ap);
-	(void)fprintf(stderr, "\n");
-	exit(1);
-	/* NOTREACHED */
+  prog = argv[0];
+  while ((c = getopt(argc, argv, optstr)) != EOF) switch (c) {
+	    case 'a':	all = 1;	break;
+	    case 's':	silent = 1;	break;
+	    case 'l':	levels = atoi(optarg);	break;
+	    default:
+		fprintf(stderr,
+			"Usage: %s [-a] [-s] [-l levels] [startdir]\n", prog);
+		exit(1);
+	}
+  do {
+	if (optind < argc) startdir = argv[optind++];
+	alc = 0;
+	(void) dodir(startdir, levels);
+  } while (optind < argc);
+  return(0);
 }

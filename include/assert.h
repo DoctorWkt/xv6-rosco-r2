@@ -1,68 +1,40 @@
-/*
- * Copyright (c) UNIX System Laboratories, Inc.  All or some portions
- * of this file are derived from material licensed to the
- * University of California by American Telephone and Telegraph Co.
- * or UNIX System Laboratories, Inc. and are reproduced herein with
- * the permission of UNIX System Laboratories, Inc.
+/* The <assert.h> header contains a macro called "assert" that allows 
+ * programmers to put assertions in the code.  These assertions can be verified
+ * at run time.  If an assertion fails, an error message is printed and the
+ * program aborts.
+ * Assertion checking can be disabled by adding the statement
  *
- *	$Id: assert.h,v 1.3 1994/05/04 08:08:25 rgrimes Exp $
- */
-/*-
- * Copyright (c) 1992 The Regents of the University of California.
- * All rights reserved.
+ *	#define NDEBUG
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
+ * to the program before the 
  *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ *	#include <assert.h>
  *
- *	@(#)assert.h	5.2 (Berkeley) 6/18/92
- */
-
-/*
- * Unlike other ANSI header files, <assert.h> may usefully be included
- * multiple times, with and without NDEBUG defined.
+ * statement.
  */
 
 #undef assert
 
+#ifndef _ANSI_H
+#include <ansi.h>
+#endif
+
+
 #ifdef NDEBUG
-#define	assert(e)	((void)0)
-#define	_assert(e)	((void)0)
+/* Debugging disabled -- do not evaluate assertions. */
+#define assert(expr)  ((void) 0)
 #else
-#define	_assert(e)	assert(e)
-#ifdef __STDC__
-#define	assert(e)	((e) ? (void)0 : __assert(__FILE__, __LINE__, #e))
-#else	/* PCC */
-#define	assert(e)	((e) ? (void)0 : __assert(__FILE__, __LINE__, "e"))
-#endif
-#endif
+/* Debugging enabled -- verify assertions at run time. */
+#ifdef _ANSI
+#define	__str(x)	# x
+#define	__xstr(x)	__str(x)
 
-#include <sys/cdefs.h>
-
-__BEGIN_DECLS
-void __assert __P((const char *, int, const char *));
-__END_DECLS
+_PROTOTYPE( void __bad_assertion, (const char *_mess) );
+#define	assert(expr)	((expr)? (void)0 : \
+				__bad_assertion("Assertion \"" #expr \
+				    "\" failed, file " __xstr(__FILE__) \
+				    ", line " __xstr(__LINE__) "\n"))
+#else
+#define assert(expr) ((void) ((expr) ? 0 : __assert( __FILE__,  __LINE__)))
+#endif /* _ANSI */
+#endif

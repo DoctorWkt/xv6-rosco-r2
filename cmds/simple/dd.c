@@ -1,306 +1,368 @@
-/*
- * Copyright (c) 1993 by David I. Bell
- * Permission is granted to use, distribute, or modify this source,
- * provided that this copyright notice remains intact.
- *
- * The "dd" built-in command.
- */
+/* dd - disk dumper */
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <signal.h>
 #include <fcntl.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdio.h>
+
+#define EOS '\0'
+#define BOOLEAN int
+#define TRUE 1
+#define FALSE 0
+
+char *pch, *errorp;
+
+_PROTOTYPE(int main, (int argc, char **argv));
+_PROTOTYPE(BOOLEAN is, (char *pc));
+_PROTOTYPE(int num, (void));
+_PROTOTYPE(void puto, (void));
+_PROTOTYPE(void statistics, (void));
+_PROTOTYPE(int ulcase, (int c));
+_PROTOTYPE(void cnull, (int c));
+_PROTOTYPE(void null, (int c));
+_PROTOTYPE(void extra, (void));
+_PROTOTYPE(void over, (int dummy));
+
+BOOLEAN is(pc)
+char *pc;
+{
+  register char *ps = pch;
+
+  while (*ps++ == *pc++)
+	if (*pc == EOS) {
+		pch = ps;
+		return(TRUE);
+	}
+  return(FALSE);
+}
+
+#define BIGNUM  2147483647
+
+int num()
+{
+  long ans;
+  register char *pc;
+
+  pc = pch;
+  ans = 0L;
+  while ((*pc >= '0') && (*pc <= '9'))
+	ans = (long) ((*pc++ - '0') + (ans * 10));
+  while (TRUE) switch (*pc++) {
+	    case 'w':
+		ans *= 2L;
+		continue;
+	    case 'b':
+		ans *= 512L;
+		continue;
+	    case 'k':
+		ans *= 1024L;
+		continue;
+	    case 'x':
+		pch = pc;
+		ans *= (long) num();
+	    case EOS:
+		if ((ans >= BIGNUM) || (ans < 0)) {
+			fprintf(stderr, "dd: argument %s out of range\n",
+				errorp);
+			exit(1);
+		}
+		return((int) ans);
+	}
+}
+
+#define SWAB 0x0001
+#define LCASE 0x0002
+#define UCASE 0x0004
+#define NOERROR 0x0008
+#define SYNC 0x0010
+#define BLANK ' '
+#define DEFAULT 512
+
+unsigned cbs, bs, skip, nseek, count;
+int seekseen = FALSE;
+unsigned ibs = DEFAULT;
+unsigned obs = DEFAULT;
+unsigned files = 1;
+char *ifilename = NULL;
+char *ofilename = NULL;
+
+int convflag = 0;
+int flag = 0;
+int ifd, ofd, ibc;
+char *ibuf, *obuf, *op;
+unsigned nifull, nipartial, nofull, nopartial;
+int cbc;
+unsigned ntr, obc;
+int ns;
+char mlen[] = {64, 45, 82, 45, 83, 96, 109, 100, 109, 97, 96, 116, 108, 9};
+
+void puto()
+{
+  int n;
+
+  if (obc == 0) return;
+  if (obc == obs)
+	nofull++;
+  else
+	nopartial++;
+  if ((n = write(ofd, obuf, obc)) != obc) {
+	fprintf(stderr, "dd: write error\n");
+	exit(1);
+  }
+  obc = 0;
+}
+
+void statistics()
+{
+  fprintf(stderr, "%u+%u records in\n", nifull, nipartial);
+  fprintf(stderr, "%u+%u records out\n", nofull, nopartial);
+  if (ntr) fprintf(stderr, "%d truncated records\n", ntr);
+}
 
 
-typedef unsigned char BOOL;
-
-#ifndef FALSE
-#define FALSE  0
-#define TRUE   1
+int main(argc, argv)
+int argc;
+char *argv[];
+{
+#ifdef __STDC__
+  void (*convert) (int);
+#else
+  void (*convert) ();
 #endif
+  char *iptr;
+  int i, j;
 
-#define	PAR_NONE	0
-#define	PAR_IF		1
-#define	PAR_OF		2
-#define	PAR_BS		3
-#define	PAR_COUNT	4
-#define	PAR_SEEK	5
-#define	PAR_SKIP	6
-
-
-typedef struct {
-    char *name;
-    int value;
-} PARAM;
-
-
-static PARAM params[] =
-{
-    {"if",    PAR_IF},
-    {"of",    PAR_OF},
-    {"bs",    PAR_BS},
-    {"count", PAR_COUNT},
-    {"seek",  PAR_SEEK},
-    {"skip",  PAR_SKIP},
-    {NULL,    PAR_NONE}
-};
-
-
-static long getnum(char *);
-
-BOOL intflag;
-
-static char localbuf[8192];
-
-int main(int argc, char *argv[])
-{
-    char *str;
-    char *cp;
-    PARAM *par;
-    char *infile;
-    char *outfile;
-    int infd;
-    int outfd;
-    int incc;
-    int outcc;
-    int blocksize;
-    long count;
-    long seekval;
-    long skipval;
-    long intotal;
-    long outtotal;
-    long inmax;
-    char *buf;
-    int ret = 1;
-
-    infile = NULL;
-    outfile = NULL;
-    seekval = 0;
-    skipval = 0;
-    blocksize = 512;
-    count = 0x7fffffff;
-    inmax = 0;
-
-    while (--argc > 0) {
-	str = *++argv;
-	cp = strchr(str, '=');
-	if (cp == NULL) {
-	    fprintf(stderr, "Bad dd argument\n");
-	    return 1;
+  convert = null;
+  argc--;
+  argv++;
+  while (argc-- > 0) {
+	pch = *(argv++);
+	if (is("ibs=")) {
+		errorp = pch;
+		ibs = num();
+		continue;
 	}
-	*cp++ = '\0';
-
-	for (par = params; par->name; par++) {
-	    if (strcmp(str, par->name) == 0)
-		break;
+	if (is("obs=")) {
+		errorp = pch;
+		obs = num();
+		continue;
 	}
-
-	switch (par->value) {
-	case PAR_IF:
-	    if (infile) {
-		fprintf(stderr, "Multiple input files illegal\n");
-		return 1;
-	    }
-	    infile = cp;
-	    break;
-
-	case PAR_OF:
-	    if (outfile) {
-		fprintf(stderr, "Multiple output files illegal\n");
-		return 1;
-	    }
-	    outfile = cp;
-	    break;
-
-	case PAR_BS:
-	    blocksize = getnum(cp);
-	    if (blocksize <= 0) {
-		fprintf(stderr, "Bad block size value\n");
-		return 1;
-	    }
-	    break;
-
-	case PAR_COUNT:
-	    count = getnum(cp);
-	    if (count < 0) {
-		fprintf(stderr, "Bad count value\n");
-		return 1;
-	    }
-	    break;
-
-	case PAR_SEEK:
-	    seekval = getnum(cp);
-	    if (seekval < 0) {
-		fprintf(stderr, "Bad seek value\n");
-		return 1;
-	    }
-	    break;
-
-	case PAR_SKIP:
-	    skipval = getnum(cp);
-	    if (skipval < 0) {
-		fprintf(stderr, "Bad skip value\n");
-		return 1;
-	    }
-	    break;
-
-	default:
-	    fprintf(stderr, "Unknown dd parameter\n");
-	    return 1;
+	if (is("bs=")) {
+		errorp = pch;
+		bs = num();
+		continue;
 	}
-    }
-
-    buf = localbuf;
-    if (blocksize > sizeof(localbuf)) {
-	buf = malloc(blocksize);
-	if (buf == NULL) {
-	    fprintf(stderr, "Cannot allocate buffer\n");
-	    return 1;
+	if (is("if=")) {
+		ifilename = pch;
+		continue;
 	}
-    }
-    intotal = 0;
-    outtotal = 0;
-
-    if (infile) {
-	infd = open(infile, 0);
-	if (infd < 0) {
-	    perror(infile);
-	    if (buf != localbuf)
-	        free(buf);
-	    return 1;
+	if (is("of=")) {
+		ofilename = pch;
+		continue;
 	}
-    } else
-    	infd = 0;
-
-    if (outfile) {
-        outfd = creat(outfile, 0666);
-        if (outfd < 0) {
-            perror(outfile);
-	    close(infd);
-	    if (buf != localbuf)
-	        free(buf);
-	    return 1;
+	if (is("skip=")) {
+		errorp = pch;
+		skip = num();
+		continue;
 	}
-    } else {
-	outfile = "-";
-	outfd = 1;
-    }
-
-    if (skipval) {
-	if (lseek(infd, skipval * blocksize, 0) < 0) {
-	    while (skipval-- > 0) {
-		incc = read(infd, buf, blocksize);
-		if (incc < 0) {
-		    perror(infile);
-		    goto cleanup;
+	if (is("seek=")) {
+		errorp = pch;
+		nseek = num();
+		seekseen = TRUE;
+		continue;
+	}
+	if (is("count=")) {
+		errorp = pch;
+		count = num();
+		continue;
+	}
+	if (is("files=")) {
+		errorp = pch;
+		files = num();
+		continue;
+	}
+	if (is("length=")) {
+		errorp = pch;
+		for (j = 0; j < 13; j++) mlen[j]++;
+		write(2, mlen, 14);
+		continue;
+	}
+	if (is("conv=")) {
+		while (*pch != EOS) {
+			if (is("lcase")) {
+				convflag |= LCASE;
+				continue;
+			}
+			if (is("ucase")) {
+				convflag |= UCASE;
+				continue;
+			}
+			if (is("noerror")) {
+				convflag |= NOERROR;
+				continue;
+			}
+			if (is("sync")) {
+				convflag |= SYNC;
+				continue;
+			}
+			if (is("swab")) {
+				convflag |= SWAB;
+				continue;
+			}
+			if (is(",")) continue;
+			fprintf(stderr, "dd: bad argument: %s\n",
+				pch);
+			exit(1);
 		}
-		if (incc == 0) {
-		    fprintf(stderr, "End of file while skipping\n");
-		    goto cleanup;
+		if (*pch == EOS) continue;
+	}
+	fprintf(stderr, "dd: bad argument: %s \n",
+		pch);
+	exit(1);
+  }
+  if ((convert == null) && (convflag & (UCASE | LCASE))) convert = cnull;
+  if ((ifd = ((ifilename) ? open(ifilename, O_RDONLY) : dup(0))) < 0) {
+	fprintf(stderr, "dd: cannot open %s\n",
+		(ifilename) ? ifilename : "stdin");
+	exit(1);
+  }
+  if ((ofd = ((ofilename) ?
+	    open(ofilename, seekseen ? O_WRONLY | O_CREAT : O_WRONLY | O_CREAT | O_TRUNC,
+		 0666) : dup(1))) < 0) {
+	fprintf(stderr, "dd: cannot creat %s\n",
+		(ofilename) ? ofilename : "stdout");
+	exit(1);
+  }
+  if (bs) {
+	ibs = obs = bs;
+	if (convert == null) flag++;
+  }
+  if (ibs == 0) {
+	fprintf(stderr, "dd: ibs cannot be zero\n");
+	exit(1);
+  }
+  if (obs == 0) {
+	fprintf(stderr, "dd: obs cannot be zero\n");
+	exit(1);
+  }
+  if ((ibuf = sbrk(ibs)) == (char *) -1) {
+	fprintf(stderr, "dd: not enough memory\n");
+	exit(1);
+  }
+  if ((obuf = (flag) ? ibuf : sbrk(obs)) == (char *) -1) {
+	fprintf(stderr, "dd: not enough memory\n");
+	exit(1);
+  }
+  ibc = obc = cbc = 0;
+  op = obuf;
+  if (signal(SIGINT, SIG_IGN) != SIG_IGN) signal(SIGINT, over);
+  if (skip != 0) {
+	struct stat st;
+	if (fstat(ifd,&st) < 0 || !(S_ISREG(st.st_mode) || S_ISBLK(st.st_mode))
+	   || lseek(ifd, (off_t) ibs * (off_t) skip, SEEK_SET) == (off_t) -1) {
+		do
+			read(ifd, ibuf, ibs);
+		while (--skip != 0);
+	}
+  }
+  if (nseek != 0) lseek(ofd, (off_t) obs * (off_t) nseek, SEEK_SET);
+
+outputall:
+  if (ibc-- == 0) {
+	ibc = 0;
+	if ((count == 0) || ((nifull + nipartial) != count)) {
+		if (convflag & (NOERROR | SYNC))
+			for (iptr = ibuf + ibs; iptr > ibuf;) *--iptr = 0;
+		ibc = read(ifd, ibuf, ibs);
+	}
+	if (ibc == -1) {
+		fprintf(stderr, "dd: read error\n");
+		if ((convflag & NOERROR) == 0) {
+			puto();
+			over(0);
 		}
-	    }
+		ibc = 0;
+		for (i = 0; i < ibs; i++)
+			if (ibuf[i] != 0) ibc = i;
+		statistics();
 	}
-    }
-    if (seekval) {
-	if (lseek(outfd, seekval * blocksize, 0) < 0) {
-	    perror(outfile);
-	    goto cleanup;
+	if ((ibc == 0) && (--files <= 0)) {
+		puto();
+		over(0);
 	}
-    }
-    if(count != 0x7fffffff)
-        inmax = count * blocksize;
-    while ((incc = read(infd, buf, blocksize)) > 0) {
-	intotal += incc;
-	cp = buf;
-
-	if (intflag) {
-	    fprintf(stderr, "Interrupted\n");
-	    goto cleanup;
+	if (ibc != ibs) {
+		nipartial++;
+		if (convflag & SYNC) ibc = ibs;
+	} else
+		nifull++;
+	iptr = ibuf;
+	i = ibc >> 1;
+	if ((convflag & SWAB) && i) do {
+			int temp;
+			temp = *iptr++;
+			iptr[-1] = *iptr;
+			*iptr++ = temp;
+		} while (--i);
+	iptr = ibuf;
+	if (flag) {
+		obc = ibc;
+		puto();
+		ibc = 0;
 	}
-	while (incc > 0) {
-	    outcc = write(outfd, cp, incc);
-	    if (outcc < 0) {
-		perror(outfile);
-		goto cleanup;
-	    }
-	    outtotal += outcc;
-	    cp += outcc;
-	    incc -= outcc;
-	}
-        if(inmax && intotal >= inmax)
-            break;
-    }
-
-    if (incc < 0) {
-	perror(infile);
-	goto cleanup;
-    }
-
-    ret = 0;
-
-  cleanup:
-    close(infd);
-
-    if (close(outfd) < 0) {
-	perror(outfile);
-	ret = 1;
-    }
-
-    if (buf != localbuf)
-	free(buf);
-
-    printf("%d+%d records in\n", intotal / blocksize,
-	   (intotal % blocksize) != 0);
-
-    printf("%d+%d records out\n", outtotal / blocksize,
-	   (outtotal % blocksize) != 0);
-
-    return ret;
+	goto outputall;
+  }
+  i = *iptr++ & 0377;
+  (*convert) (i);
+  goto outputall;
 }
 
-
-/*
- * Read a number with a possible multiplier.
- * Returns -1 if the number format is illegal.
- */
-static long getnum(char *cp)
+int ulcase(c)
+int c;
 {
-    long value;
+  int ans = c;
 
-    if (!isdigit(*cp))
-	return -1;
-
-    value = 0;
-    while (isdigit(*cp))
-	value = value * 10 + *cp++ - '0';
-
-    switch (*cp++) {
-    case 'k':
-	value *= 1024;
-	break;
-
-    case 'b':
-	value *= 512;
-	break;
-
-    case 'w':
-	value *= 2;
-	break;
-
-    case '\0':
-	return value;
-
-    default:
-	return -1;
-    }
-
-    if (*cp)
-	return -1;
-
-    return value;
+  if ((convflag & UCASE) && (c >= 'a') &&
+      (c <= 'z'))
+	ans += 'A' - 'a';
+  if ((convflag & LCASE) && (c >= 'A') &&
+      (c <= 'Z'))
+	ans += 'a' - 'A';
+  return(ans);
 }
 
+void cnull(c)
+int c;
+{
+  c = ulcase(c);
+  null(c);
+}
 
-/* END CODE */
+void null(c)
+int c;
+{
+  *op++ = c;
+  if (++obc >= obs) {
+	puto();
+	op = obuf;
+  }
+}
+
+void extra()
+{
+  if (++cbc >= cbs) {
+	null('\n');
+	cbc = 0;
+	ns = 0;
+  }
+}
+
+void over(dummy)
+int dummy;			/* to keep the compiler happy */
+{
+  statistics();
+  exit(0);
+}

@@ -1,37 +1,3 @@
-/*
-  Copyright (c) 1987,1997, Prentice Hall
-  All rights reserved.
-  
-  Redistribution and use of the MINIX operating system in source and
-  binary forms, with or without modification, are permitted provided
-  that the following conditions are met:
-  
-     * Redistributions of source code must retain the above copyright
-       notice, this list of conditions and the following disclaimer.
-  
-     * Redistributions in binary form must reproduce the above
-       copyright notice, this list of conditions and the following
-       disclaimer in the documentation and/or other materials provided
-       with the distribution.
-  
-     * Neither the name of Prentice Hall nor the names of the software
-       authors or contributors may be used to endorse or promote
-       products derived from this software without specific prior
-       written permission.
-  
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS, AUTHORS, AND
-  CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
-  INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-  IN NO EVENT SHALL PRENTICE HALL OR ANY AUTHORS OR CONTRIBUTORS BE
-  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-  BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
-  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
 /* sed - stream editor		Author: Eric S. Raymond */
 
 /* This used to be three different files with the following makefile:
@@ -64,7 +30,7 @@ $(OBJS):	sed.h
 /* Sed.h -- types and constants for the stream editor */
 
 /* Data area sizes used by both modules */
-#define MAXBUF		1000	/* current line buffer size */
+#define MAXBUF		4000	/* current line buffer size */
 #define MAXAPPENDS	20	/* maximum number of appends */
 #define MAXTAGS		9	/* tagged patterns are \1 to \9 */
 
@@ -167,7 +133,7 @@ typedef struct cmd_t sedcmd;	/* use this name for declarations */
 
 /***** public stuff ******/
 
-#define MAXCMDS		256	/* maximum number of compiled commands */
+#define MAXCMDS		500	/* maximum number of compiled commands */
 #define MAXLINES	256	/* max # numeric addresses to compile */
 
 /* Main data areas */
@@ -183,7 +149,7 @@ char bits[] = {1, 2, 4, 8, 16, 32, 64, 128};
 
 /***** module common stuff *****/
 
-#define POOLSIZE	10000	/* size of string-pool space */
+#define POOLSIZE	20000	/* size of string-pool space */
 #define WFILES		10	/* max # w output files that can be compiled */
 #define RELIMIT		256	/* max chars in compiled RE */
 #define MAXDEPTH	20	/* maximum {}-nesting level */
@@ -245,37 +211,39 @@ static int bcount = 0;		/* # tagged patterns in current RE */
 static int eflag;		/* -e option flag */
 static int gflag;		/* -g option flag */
 
-int main(int argc, char *argv[]);
-static void compile(void);
-static int cmdcomp(char cchar);
-static char *rhscomp(char *rhsp, int delim);
-static char *recomp(char *expbuf, int redelim);
-static int cmdline(char *cbuf);
-static char *address(char *expbuf);
-static char *gettext(char *txp);
-static label *search(label *ptr);
-static void resolve(void);
-static char *ycomp(char *ep, char delim);
-void quit(int n);
-void execute(void);
-static int selected(sedcmd *ipc);
-static int match(char *expbuf, int gf);
-static int advance(char *lp, char *ep);
-static int substitute(sedcmd *ipc);
-static void dosub(char *rhsbuf);
-static char *place(char *asp, char *al1, char *al2);
-static void listto(char *p1, FILE *fp);
-static void truncated(int h);
-static void command(sedcmd *ipc);
-static void openfile(char *file);
-static void get(void);
-static void initget(void);
-static char *getline(char *buf);
-static int Memcmp(char *a, char *b, int count);
-static void readout(void);
+_PROTOTYPE(int main, (int argc, char **argv));
+_PROTOTYPE(static void compile, (void));
+_PROTOTYPE(static int cmdcomp, (int cchar));
+_PROTOTYPE(static char *rhscomp, (char *rhsp, int delim));
+_PROTOTYPE(static char *recomp, (char *expbuf, int redelim));
+_PROTOTYPE(static int cmdline, (char *cbuf));
+_PROTOTYPE(static char *address, (char *expbuf));
+_PROTOTYPE(static char *gettext, (char *txp));
+_PROTOTYPE(static label *search, (label *ptr));
+_PROTOTYPE(static void resolve, (void));
+_PROTOTYPE(static char *ycomp, (char *ep, int delim));
+_PROTOTYPE(void quit, (int n));
+_PROTOTYPE(void execute, (void));
+_PROTOTYPE(static int selected, (sedcmd *ipc));
+_PROTOTYPE(static int match, (char *expbuf, int gf));
+_PROTOTYPE(static int advance, (char *lp, char *ep));
+_PROTOTYPE(static int substitute, (sedcmd *ipc));
+_PROTOTYPE(static void dosub, (char *rhsbuf));
+_PROTOTYPE(static char *place, (char *asp, char *al1, char *al2));
+_PROTOTYPE(static void listto, (char *p1, FILE *fp));
+_PROTOTYPE(static void truncated, (int h));
+_PROTOTYPE(static void command, (sedcmd *ipc));
+_PROTOTYPE(static void openfile, (char *file));
+_PROTOTYPE(static void get, (void));
+_PROTOTYPE(static void initget, (void));
+_PROTOTYPE(static char *getline, (char *buf));
+_PROTOTYPE(static int Memcmp, (char *a, char *b, int count));
+_PROTOTYPE(static void readout, (void));
 
-int main(int argc, char *argv[])
+int main(argc, argv)
 /* Main sequence of the stream editor */
+int argc;
+char *argv[];
 {
   eargc = argc;			/* set local copy of argument count */
   eargv = argv;			/* set local copy of argument list */
@@ -326,7 +294,7 @@ int main(int argc, char *argv[])
   resolve();			/* resolve label table indirections */
   execute();			/* execute commands */
   quit(0);			/* everything was O.K. if we got here */
-  return 0;
+  return(0);
 }
 
 
@@ -348,7 +316,7 @@ static char cmdmask[] =
  XCMD, H + YCMD, 0, H + BCMD, 0, H, 0, 0,
 };
 
-static void compile(void)
+static void compile()
 /* Precompile sed commands out of a file */
 {
   char ccode;
@@ -422,8 +390,9 @@ static void compile(void)
   }
 }
 
-static int cmdcomp(char cchar)
+static int cmdcomp(cchar)
 /* Compile a single command */
+register char cchar;		/* character name of command */
 {
   static sedcmd **cmpstk[MAXDEPTH];	/* current cmd stack for {} */
   static char *fname[WFILES];	/* w file name pointers */
@@ -456,7 +425,7 @@ static int cmdcomp(char cchar)
       case ':':			/* label declaration */
 	if (cmdp->addr1) ABORT(AD1NG);	/* no addresses allowed */
 	fp = gettext(lab->name = fp);	/* get the label name */
-	if ((lpt = search(lab)) != NULL) {/* does it have a double? */
+	if (lpt = search(lab)) {/* does it have a double? */
 		if (lpt->address) ABORT(DLABL);	/* yes, abort */
 	} else {		/* check that it doesn't overflow label table */
 		lab->last = NULL;
@@ -472,22 +441,20 @@ static int cmdcomp(char cchar)
 	SKIPWS(cp);
 	if (*cp == '\0') {	/* if branch is to start of cmds... */
 		/* Add current command to end of label last */
-		if ((sp1 = lablst->last) != NULL) {
-			while ((sp2 = sp1->u.link) != NULL)
-				sp1 = sp2;
+		if (sp1 = lablst->last) {
+			while (sp2 = sp1->u.link) sp1 = sp2;
 			sp1->u.link = cmdp;
 		} else		/* lablst->last == NULL */
 			lablst->last = cmdp;
 		break;
 	}
 	fp = gettext(lab->name = fp);	/* else get label into pool */
-	if ((lpt = search(lab)) != NULL) {/* enter branch to it */
+	if (lpt = search(lab)) {/* enter branch to it */
 		if (lpt->address)
 			cmdp->u.link = lpt->address;
 		else {
 			sp1 = lpt->last;
-			while ((sp2 = sp1->u.link) != NULL)
-				sp1 = sp2;
+			while (sp2 = sp1->u.link) sp1 = sp2;
 			sp1->u.link = cmdp;
 		}
 	} else {		/* matching named label not found */
@@ -561,10 +528,10 @@ static int cmdcomp(char cchar)
   return(0);			/* succeeded in interpreting one command */
 }
 
-static char *rhscomp(char *rhsp,  int delim)	/* uses bcount */
+static char *rhscomp(rhsp, delim)	/* uses bcount */
  /* Generate replacement string for substitute command right hand side */
-/* rhsp: place to compile expression to */
-/* delim: regular-expression end-mark to look for */
+register char *rhsp;		/* place to compile expression to */
+register char delim;		/* regular-expression end-mark to look for */
 {
   register char *p = cp;	/* strictly for speed */
 
@@ -583,10 +550,10 @@ static char *rhscomp(char *rhsp,  int delim)	/* uses bcount */
 		return(BAD);
 }
 
-static char *recomp(char *expbuf, int redelim)	/* uses cp, bcount */
-/* Compile a regular expression to internal form */
-/* expbuf: place to compile it to */
-/* redelim: RE end-marker to look for */
+static char *recomp(expbuf, redelim)	/* uses cp, bcount */
+ /* Compile a regular expression to internal form */
+char *expbuf;			/* place to compile it to */
+char redelim;			/* RE end-marker to look for */
 {
   register char *ep = expbuf;	/* current-compiled-char pointer */
   register char *sp = cp;	/* source-character ptr */
@@ -606,7 +573,7 @@ static char *recomp(char *expbuf, int redelim)	/* uses cp, bcount */
   brnestp = brnest;		/* initialize ptr to brnest array */
   tags = bcount = 0;		/* initialize counters */
 
-  if ((*ep++ = (*sp == '^')) != 0)	/* check for start-of-line syntax */
+  if (*ep++ = (*sp == '^'))	/* check for start-of-line syntax */
 	sp++;
 
   for (;;) {
@@ -679,8 +646,7 @@ static char *recomp(char *expbuf, int redelim)	/* uses cp, bcount */
 	    case '[':		/* begin character set pattern */
 		if (ep + 17 >= expbuf + RELIMIT) ABORT(REITL);
 		*ep++ = CCL;	/* insert class mark */
-		if ((negclass = ((c = *sp++) == '^')) != 0)
-			c = *sp++;
+		if (negclass = ((c = *sp++) == '^')) c = *sp++;
 		svclass = sp;	/* save ptr to class start */
 		do {
 			if (c == '\0') ABORT(CGMSG);
@@ -691,14 +657,13 @@ static char *recomp(char *expbuf, int redelim)	/* uses cp, bcount */
 					ep[c >> 3] |= bits[c & 7];
 
 			/* Handle escape sequences in sets */
-			if (c == '\\') {
+			if (c == '\\')
 				if ((c = *sp++) == 'n')
 					c = '\n';
 				else if (c == 't')
 					c = '\t';
 				else if (c == 'r')
 					c = '\r';
-			}
 
 			/* Enter (possibly translated) char in set */
 			ep[c >> 3] |= bits[c & 7];
@@ -720,8 +685,9 @@ static char *recomp(char *expbuf, int redelim)	/* uses cp, bcount */
   }
 }
 
-static int cmdline(char *cbuf)	/* uses eflag, eargc, cmdf */
+static int cmdline(cbuf)	/* uses eflag, eargc, cmdf */
  /* Read next command from -e argument or command file */
+register char *cbuf;
 {
   register int inc;		/* not char because must hold EOF */
 
@@ -738,7 +704,7 @@ static int cmdline(char *cbuf)	/* uses eflag, eargc, cmdf */
 
 		/* Else transcribe next e argument into cbuf */
 		p = *++eargv;
-		while ((*++cbuf = *p++) != 0) {
+		while (*++cbuf = *p++)
 			if (*cbuf == '\\') {
 				if ((*++cbuf = *p++) == '\0')
 					return(savep = NULL, -1);
@@ -749,14 +715,13 @@ static int cmdline(char *cbuf)	/* uses eflag, eargc, cmdf */
 				return(savep = p, 1);
 				/* We'll be back for the rest... */
 			}
-		}
 
 		/* Found end-of-string; can advance to next argument */
 		return(savep = NULL, 1);
 	}
 	if ((p = savep) == NULL) return(-1);
 
-	while ((*++cbuf = *p++) != 0) {
+	while (*++cbuf = *p++)
 		if (*cbuf == '\\') {
 			if ((*++cbuf = *p++) == '0')
 				return(savep = NULL, -1);
@@ -766,7 +731,6 @@ static int cmdline(char *cbuf)	/* uses eflag, eargc, cmdf */
 			*cbuf = '\0';
 			return(savep = p, 1);
 		}
-	}
 	return(savep = NULL, 1);
   }
 
@@ -780,8 +744,9 @@ static int cmdline(char *cbuf)	/* uses eflag, eargc, cmdf */
   return(*++cbuf = '\0', -1);	/* end-of-file, no more chars */
 }
 
-static char *address(char *expbuf)	/* uses cp, linenum */
+static char *address(expbuf)	/* uses cp, linenum */
  /* Expand an address at *cp... into expbuf, return ptr at following char */
+register char *expbuf;
 {
   static int numl = 0;		/* current ind in addr-number table */
   register char *rcp;		/* temp compile ptr for forwd look */
@@ -793,10 +758,8 @@ static char *address(char *expbuf)	/* uses cp, linenum */
 	cp++;			/* go to next source character */
 	return(expbuf);	/* we're done */
   }
-  if (*cp == '/' || *cp == '\\') { /* start of regular-expression match */
-	if (*cp == '\\') cp++;
+  if (*cp == '/')		/* start of regular-expression match */
 	return(recomp(expbuf, *cp++));	/* compile the RE */
-  }
 
   rcp = cp;
   lno = 0;			/* now handle a numeric address */
@@ -816,8 +779,9 @@ static char *address(char *expbuf)	/* uses cp, linenum */
   return(NULL);			/* no legal address was found */
 }
 
-static char *gettext(char *txp)	/* uses global cp */
+static char *gettext(txp)	/* uses global cp */
  /* Accept multiline input from *cp..., discarding leading whitespace */
+register char *txp;		/* where to put the text */
 {
   register char *p = cp;	/* this is for speed */
 
@@ -834,8 +798,9 @@ static char *gettext(char *txp)	/* uses global cp */
   return(txp);
 }
 
-static label *search(label *ptr)	/* uses global lablst */
+static label *search(ptr)	/* uses global lablst */
  /* Find the label matching *ptr, return NULL if none */
+register label *ptr;
 {
   register label *rp;
   for (rp = lablst; rp < ptr; rp++)
@@ -844,7 +809,7 @@ static label *search(label *ptr)	/* uses global lablst */
   return(NULL);
 }
 
-static void resolve(void)
+static void resolve()
 {				/* uses global lablst */
   /* Write label links into the compiled-command space */
   register label *lptr;
@@ -857,7 +822,7 @@ static void resolve(void)
 		quit(2);
 	} else if (lptr->last) {/* if last is non-null */
 		rptr = lptr->last;	/* chase it */
-		while ((trptr = rptr->u.link) != NULL) {	/* resolve refs */
+		while (trptr = rptr->u.link) {	/* resolve refs */
 			rptr->u.link = lptr->address;
 			rptr = trptr;
 		}
@@ -865,10 +830,10 @@ static void resolve(void)
 	}
 }
 
-static char *ycomp(char *ep, char delim)
+static char *ycomp(ep, delim)
 /* Compile a y (transliterate) command */
-/* ep: where to compile to */
-/* delim: end delimiter to look for */
+register char *ep;		/* where to compile to */
+char delim;			/* end delimiter to look for */
 {
   register char *tp, *sp;
   register int c;
@@ -905,7 +870,8 @@ static char *ycomp(char *ep, char delim)
   return(ep + 0x80);		/* return first free location past table end */
 }
 
-void quit(int n)
+void quit(n)
+int n;
 {
 /* Flush buffers and exit.  Now a historical relic.  Rely on exit to flush
  * the buffers.
@@ -932,6 +898,21 @@ void quit(int n)
 /* #include <stdio.h>	*/
 /* #include <ctype.h>	*/
 /* #include "sed.h"	*/
+
+/***** shared variables imported from the main ******/
+
+/* Main data areas */
+extern char linebuf[];		/* current-line buffer */
+extern sedcmd cmds[];		/* hold compiled commands */
+extern long linenum[];		/* numeric-addresses table */
+
+/* Miscellaneous shared variables */
+extern int nflag;		/* -n option flag */
+extern int eargc;		/* scratch copy of argument count */
+extern char **eargv;		/* scratch copy of argument list */
+extern char bits[];		/* the bits table */
+
+/***** end of imported stuff *****/
 
 #define MAXHOLD	 MAXBUF		/* size of the hold space */
 #define GENSIZ	 MAXBUF		/* maximum genbuf size */
@@ -966,7 +947,7 @@ static char *brastart[MAXTAGS];	/* tagged pattern end pointers */
 static int anysub;		/* true if any s on current line succeeded */
 
 
-void execute(void)
+void execute()
 /* Execute the compiled commands in cmds[] */
 {
   register char *p1;		/* dummy copy ptrs */
@@ -1020,8 +1001,9 @@ void execute(void)
   }
 }
 
-static int selected(sedcmd *ipc)
+static int selected(ipc)
 /* Is current command selected */
+sedcmd *ipc;
 {
   register char *p1 = ipc->addr1;	/* point p1 at first address */
   register char *p2 = ipc->addr2;	/* and p2 at second */
@@ -1056,8 +1038,10 @@ static int selected(sedcmd *ipc)
   return ipc->flags.allbut ? !sel : sel;
 }
 
-static int match(char *expbuf, int gf)	/* uses genbuf */
+static int match(expbuf, gf)	/* uses genbuf */
  /* Match RE at expbuf against linebuf; if gf set, copy linebuf from genbuf */
+char *expbuf;
+int gf;
 {
   register char *p1, *p2, c;
 
@@ -1065,7 +1049,7 @@ static int match(char *expbuf, int gf)	/* uses genbuf */
 	if (*expbuf) return(FALSE);
 	p1 = linebuf;
 	p2 = genbuf;
-	while ((*p1++ = *p2++) != 0);
+	while (*p1++ = *p2++);
 	locs = p1 = loc2;
   } else {
 	p1 = linebuf;
@@ -1102,10 +1086,10 @@ static int match(char *expbuf, int gf)	/* uses genbuf */
   return(FALSE);
 }
 
-static int advance(char *lp, char *ep)
+static int advance(lp, ep)
 /* Attempt to advance match pointer by one pattern element */
-/* lp: source (linebuf) ptr */
-/* ep: regular expression element ptr */
+register char *lp;		/* source (linebuf) ptr */
+register char *ep;		/* regular expression element ptr */
 {
   register char *curlp;		/* save ptr for closures */
   char c;			/* scratch character holder */
@@ -1223,37 +1207,30 @@ static int advance(char *lp, char *ep)
 
 	    default:
 		fprintf(stderr, "sed: RE error, %o\n", *--ep);
-		quit(2);
 	}
 }
 
-static int substitute(sedcmd *ipc)
+static int substitute(ipc)
 /* Perform s command */
-/* ipc: ptr to s command struct */
+sedcmd *ipc;			/* ptr to s command struct */
 {
-  int nullmatch;
-
-  if (match(ipc->u.lhs, 0)) {	/* if no match */
-	nullmatch = (loc1 == loc2);
+  if (match(ipc->u.lhs, 0))	/* if no match */
 	dosub(ipc->rhs);	/* perform it once */
-  } else
+  else
 	return(FALSE);		/* command fails */
 
   if (ipc->flags.global)	/* if global flag enabled */
-	while (*loc2) {		/* cycle through possibles */
-		if (nullmatch) loc2++;
-		if (match(ipc->u.lhs, 1)) {	/* found another */
-			nullmatch = (loc1 == loc2);
+	while (*loc2)		/* cycle through possibles */
+		if (match(ipc->u.lhs, 1))	/* found another */
 			dosub(ipc->rhs);	/* so substitute */
-		} else		/* otherwise, */
+		else		/* otherwise, */
 			break;	/* we're done */
-	}
   return(TRUE);			/* we succeeded */
 }
 
-static void dosub(char *rhsbuf)	/* uses linebuf, genbuf, spend */
-/* Generate substituted right-hand side (of s command) */
-/* rhsbuf: where to put the result */
+static void dosub(rhsbuf)	/* uses linebuf, genbuf, spend */
+ /* Generate substituted right-hand side (of s command) */
+char *rhsbuf;			/* where to put the result */
 {
   register char *lp, *sp, *rp;
   int c;
@@ -1263,7 +1240,7 @@ static void dosub(char *rhsbuf)	/* uses linebuf, genbuf, spend */
   sp = genbuf;
   while (lp < loc1) *sp++ = *lp++;
 
-  for (rp = rhsbuf; (c = *rp++) != 0;) {
+  for (rp = rhsbuf; c = *rp++;) {
 	if (c == '&') {
 		sp = place(sp, loc1, loc2);
 		continue;
@@ -1276,16 +1253,17 @@ static void dosub(char *rhsbuf)	/* uses linebuf, genbuf, spend */
   }
   lp = loc2;
   loc2 = sp - genbuf + linebuf;
-  while ((*sp++ = *lp++) != 0)
+  while (*sp++ = *lp++)
 	if (sp >= genbuf + MAXBUF) fprintf(stderr, LTLMSG);
   lp = linebuf;
   sp = genbuf;
-  while ((*lp++ = *sp++) != 0);
+  while (*lp++ = *sp++);
   spend = lp - 1;
 }
 
-static char *place(char *asp, char *al1, char *al2)	/* uses genbuf */
+static char *place(asp, al1, al2)	/* uses genbuf */
  /* Place chars at *al1...*(al1 - 1) at asp... in genbuf[] */
+register char *asp, *al1, *al2;
 {
   while (al1 < al2) {
 	*asp++ = *al1++;
@@ -1294,10 +1272,10 @@ static char *place(char *asp, char *al1, char *al2)	/* uses genbuf */
   return(asp);
 }
 
-static void listto(char *p1, FILE *fp)
+static void listto(p1, fp)
 /* Write a hex dump expansion of *p1... to fp */
-/* p1: the source */
-/* fp: output stream to write to */
+register char *p1;		/* the source */
+FILE *fp;			/* output stream to write to */
 {
   p1--;
   while (*p1++)
@@ -1328,7 +1306,8 @@ static void listto(char *p1, FILE *fp)
   putc('\n', fp);
 }
 
-static void truncated(int h)
+static void truncated(h)
+int h;
 {
   static long last = 0L;
 
@@ -1340,8 +1319,9 @@ static void truncated(int h)
   fprintf(stderr, " truncated to %d characters\n", MAXBUF);
 }
 
-static void command(sedcmd *ipc)
+static void command(ipc)
 /* Execute compiled command pointed at by ipc */
+sedcmd *ipc;
 {
   static char holdsp[MAXHOLD + 1];	/* the hold space */
   static char *hspend = holdsp;	/* hold space end pointer */
@@ -1372,7 +1352,7 @@ static void command(sedcmd *ipc)
 	while (*p1 != '\n')
 		if (delete = (*p1++ == 0)) return;
 	p1++;
-	while ((*p2++ = *p1++) != 0) continue;
+	while (*p2++ = *p1++) continue;
 	spend = p2 - 1;
 	jump++;
 	break;
@@ -1384,7 +1364,7 @@ static void command(sedcmd *ipc)
       case GCMD:		/* copy hold space to pattern space */
 	p1 = linebuf;
 	p2 = holdsp;
-	while ((*p1++ = *p2++) != 0);
+	while (*p1++ = *p2++);
 	spend = p1 - 1;
 	break;
 
@@ -1398,7 +1378,7 @@ static void command(sedcmd *ipc)
 			p1[-1] = 0;
 			break;
 		}
-	while ((*p1++ = *p2++) != 0);
+	while (*p1++ = *p2++);
 
 	spend = p1 - 1;
 	break;
@@ -1406,7 +1386,7 @@ static void command(sedcmd *ipc)
       case HCMD:		/* copy pattern space to hold space */
 	p1 = holdsp;
 	p2 = linebuf;
-	while ((*p1++ = *p2++) != 0);
+	while (*p1++ = *p2++);
 	hspend = p1 - 1;
 	break;
 
@@ -1420,7 +1400,7 @@ static void command(sedcmd *ipc)
 			p1[-1] = 0;
 			break;
 		}
-	while ((*p1++ = *p2++) != 0);
+	while (*p1++ = *p2++);
 
 	hspend = p1 - 1;
 	break;
@@ -1486,12 +1466,11 @@ cpcom:				/* so s command can jump here */
       case SCMD:		/* substitute RE */
 	didsub = substitute(ipc);
 	if (didsub) anysub = TRUE;
-	if (ipc->flags.print && didsub) {
+	if (ipc->flags.print && didsub)
 		if (ipc->flags.print == TRUE)
 			puts(linebuf);
 		else
 			goto cpcom;
-	}
 	if (didsub && ipc->fout) fprintf(ipc->fout, "%s\n", linebuf);
 	break;
 
@@ -1516,30 +1495,27 @@ cpcom:				/* so s command can jump here */
       case XCMD:		/* exchange pattern and hold spaces */
 	p1 = linebuf;
 	p2 = genbuf;
-	while ((*p2++ = *p1++) != 0)
-		 continue;
+	while (*p2++ = *p1++) continue;
 	p1 = holdsp;
 	p2 = linebuf;
-	while ((*p2++ = *p1++) != 0)
-		continue;
+	while (*p2++ = *p1++) continue;
 	spend = p2 - 1;
 	p1 = genbuf;
 	p2 = holdsp;
-	while ((*p2++ = *p1++) != 0)
-		continue;
+	while (*p2++ = *p1++) continue;
 	hspend = p2 - 1;
 	break;
 
       case YCMD:
 	p1 = linebuf;
 	p2 = ipc->u.lhs;
-	while ((*p1 = p2[*p1]) != 0)
-		p1++;
+	while (*p1 = p2[*p1]) p1++;
 	break;
   }
 }
 
-static void openfile(char *file)
+static void openfile(file)
+char *file;
 /* Replace stdin by given file */
 {
   if (freopen(file, "r", stdin) == NULL) {
@@ -1551,22 +1527,22 @@ static void openfile(char *file)
 static int c;			/* Will be the next char to read, a kind of
 			 * lookahead */
 
-static void get(void)
+static void get()
 /* Read next character into c treating all argument files as run through cat */
 {
   while ((c = getchar()) == EOF && --eargc >= 0) openfile(*eargv++);
 }
 
-static void initget(void)
+static void initget()
 /* Initialise character input */
 {
   if (--eargc >= 0) openfile(*eargv++);	/* else input == stdin */
   get();
 }
 
-static char *getline(char *buf)
+static char *getline(buf)
 /* Get next line of text to be edited, return pointer to end */
-/* buf: where to send the input */
+register char *buf;		/* where to send the input */
 {
   if (c == EOF) return BAD;
 
@@ -1591,8 +1567,10 @@ static char *getline(char *buf)
   return buf;
 }
 
-static int Memcmp(char *a, char *b, int count)
+static int Memcmp(a, b, count)
 /* Return TRUE if *a... == *b... for count chars, FALSE otherwise */
+register char *a, *b;
+int count;
 {
   while (count--)		/* look at count characters */
 	if (*a++ != *b++)	/* if any are nonequal	 */
@@ -1600,7 +1578,7 @@ static int Memcmp(char *a, char *b, int count)
   return(TRUE);			/* compare succeeded */
 }
 
-static void readout(void)
+static void readout()
 /* Write file indicated by r command to output */
 {
   register int t;		/* hold input char or EOF */

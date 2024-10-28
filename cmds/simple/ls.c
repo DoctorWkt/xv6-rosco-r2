@@ -1,6 +1,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <stdlib.h>
@@ -39,9 +40,9 @@ void listone(char *entry, struct stat *sbptr)
     }
 
     if (ftype=='c')
-      printf("%crwxrwxrwx %5d root root %3d,%2d %s %s\n", 
+      printf("%crwxrwxrwx %5d root root %s %s\n", 
 	ftype, (showinums ? sbptr->st_ino : sbptr->st_nlink),
-	major(sbptr->st_dev), minor(sbptr->st_dev), timestring, entry);
+	timestring, entry);
     else
       printf("%crwxrwxrwx %5d root root %6ld %s %s\n", 
 	ftype, (showinums ? sbptr->st_ino : sbptr->st_nlink),
@@ -107,10 +108,12 @@ void listmany(char *entry)
     while ((dent=readdir(D))!=NULL) {
 
       // Skip empty directory entries
-      if (dent->d_name[0]=='\0') continue;
+      if (dent->d_name[0]=='\0') { free(dent); continue; }
 
       // Skip dot files
-      if ((showdots==0) && (dent->d_name[0]=='.')) continue;
+      if ((showdots==0) && (dent->d_name[0]=='.')) {
+	free(dent); continue;
+      }
 
       // Copy the directory name into the buffer and then
       // append the file's name, so we can stat the name.
@@ -126,14 +129,14 @@ void listmany(char *entry)
       // Get the file's stats
       if (stat(buf, &sb)==-1) {
         printf("%s: non-existent\n", buf);
-        continue;
+        free(dent); continue;
       }
 
       // and add the file to the array
       memcpy(&(namelist[count].dent), dent, sizeof(struct dirent));
       memcpy(&(namelist[count].sb), &sb, sizeof(sb));
       count++;
-
+      free(dent);
     }
 
     // Sort the array into name order

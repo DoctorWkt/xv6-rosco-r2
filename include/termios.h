@@ -1,275 +1,171 @@
-/*
- * Copyright (c) 1988, 1989 The Regents of the University of California.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- *	from: @(#)termios.h	7.22 (Berkeley) 5/7/91
- *	$Id: termios.h,v 1.3 1993/10/16 17:17:57 rgrimes Exp $
- */
+/* The <termios.h> header is used for controlling tty modes. */
 
-/*
- *  termios structure
- */
-#ifndef _TERMIOS_H_
-#define _TERMIOS_H_
+#ifndef _TERMIOS_H
+#define _TERMIOS_H
 
-/* 
- * Special Control Characters 
- *
- * Index into c_cc[] character array.
- *
- *	Name	     Subscript	Enabled by 
- */
-#define	VEOF		0	/* ICANON */
-#define	VEOL		1	/* ICANON */
-#ifndef _POSIX_SOURCE
-#define	VEOL2		2	/* ICANON */
-#endif
-#define	VERASE		3	/* ICANON */
-#ifndef _POSIX_SOURCE
-#define VWERASE 	4	/* ICANON */
-#endif 
-#define VKILL		5	/* ICANON */
-#ifndef _POSIX_SOURCE
-#define	VREPRINT 	6	/* ICANON */
-#endif
-/*			7	   spare 1 */
-#define VINTR		8	/* ISIG */
-#define VQUIT		9	/* ISIG */
-#define VSUSP		10	/* ISIG */
-#ifndef _POSIX_SOURCE
-#define VDSUSP		11	/* ISIG */
-#endif
-#define VSTART		12	/* IXON, IXOFF */
-#define VSTOP		13	/* IXON, IXOFF */
-#ifndef _POSIX_SOURCE
-#define	VLNEXT		14	/* IEXTEN */
-#define	VDISCARD	15	/* IEXTEN */
-#endif
-#define VMIN		16	/* !ICANON */
-#define VTIME		17	/* !ICANON */
-#ifndef _POSIX_SOURCE
-#define VSTATUS		18	/* ICANON */
-#endif
-/*			19	   spare 2 */
-#define	NCCS		20
+#define _TERMIOS_EMULATION 1	/* this is an emulation, not a real termios */
 
-#define _POSIX_VDISABLE	((unsigned char)'\377')
-
-#ifndef _POSIX_SOURCE
-#define CCEQ(val, c)	(c == val ? val != _POSIX_VDISABLE : 0)
-#endif
-
-/*
- * Input flags - software input processing
- */
-#define	IGNBRK		0x00000001	/* ignore BREAK condition */
-#define	BRKINT		0x00000002	/* map BREAK to SIGINTR */
-#define	IGNPAR		0x00000004	/* ignore (discard) parity errors */
-#define	PARMRK		0x00000008	/* mark parity and framing errors */
-#define	INPCK		0x00000010	/* enable checking of parity errors */
-#define	ISTRIP		0x00000020	/* strip 8th bit off chars */
-#define	INLCR		0x00000040	/* map NL into CR */
-#define	IGNCR		0x00000080	/* ignore CR */
-#define	ICRNL		0x00000100	/* map CR to NL (ala CRMOD) */
-#define	IXON		0x00000200	/* enable output flow control */
-#define	IXOFF		0x00000400	/* enable input flow control */
-#ifndef _POSIX_SOURCE
-#define	IXANY		0x00000800	/* any char will restart after stop */
-#define IMAXBEL		0x00002000	/* ring bell on input queue full */
-#endif  /*_POSIX_SOURCE */
-
-/*
- * Output flags - software output processing
- */
-#define	OPOST		0x00000001	/* enable following output processing */
-#ifndef _POSIX_SOURCE
-#define ONLCR		0x00000002	/* map NL to CR-NL (ala CRMOD) */
-#define OXTABS		0x00000004	/* expand tabs to spaces */
-#define ONOEOT		0x00000008	/* discard EOT's (^D) on output) */
-#endif  /*_POSIX_SOURCE */
-
-/*
- * Control flags - hardware control of terminal
- */
-#ifndef _POSIX_SOURCE
-#define	CIGNORE		0x00000001	/* ignore control flags */
-#endif
-#define CSIZE		0x00000300	/* character size mask */
-#define     CS5		    0x00000000	    /* 5 bits (pseudo) */
-#define     CS6		    0x00000100	    /* 6 bits */
-#define     CS7		    0x00000200	    /* 7 bits */
-#define     CS8		    0x00000300	    /* 8 bits */
-#define CSTOPB		0x00000400	/* send 2 stop bits */
-#define CREAD		0x00000800	/* enable receiver */
-#define PARENB		0x00001000	/* parity enable */
-#define PARODD		0x00002000	/* odd parity, else even */
-#define HUPCL		0x00004000	/* hang up on last close */
-#define CLOCAL		0x00008000	/* ignore modem status lines */
-#ifndef _POSIX_SOURCE
-#define CCTS_OFLOW	0x00010000	/* CTS flow control of output */
-#define CRTSCTS		CCTS_OFLOW	/* ??? */
-#define CRTS_IFLOW	0x00020000	/* RTS flow control of input */
-#define	MDMBUF		0x00100000	/* flow control output via Carrier */
-#endif
-
-
-/* 
- * "Local" flags - dumping ground for other state
- *
- * Warning: some flags in this structure begin with
- * the letter "I" and look like they belong in the
- * input flag.
- */
-
-#ifndef _POSIX_SOURCE
-#define	ECHOKE		0x00000001	/* visual erase for line kill */
-#endif  /*_POSIX_SOURCE */
-#define	ECHOE		0x00000002	/* visually erase chars */
-#define	ECHOK		0x00000004	/* echo NL after line kill */
-#define ECHO		0x00000008	/* enable echoing */
-#define	ECHONL		0x00000010	/* echo NL even if ECHO is off */
-#ifndef _POSIX_SOURCE
-#define	ECHOPRT		0x00000020	/* visual erase mode for hardcopy */
-#define ECHOCTL  	0x00000040	/* echo control chars as ^(Char) */
-#endif  /*_POSIX_SOURCE */
-#define	ISIG		0x00000080	/* enable signals INTR, QUIT, [D]SUSP */
-#define	ICANON		0x00000100	/* canonicalize input lines */
-#ifndef _POSIX_SOURCE
-#define ALTWERASE	0x00000200	/* use alternate WERASE algorithm */
-#endif  /*_POSIX_SOURCE */
-#define	IEXTEN		0x00000400	/* enable DISCARD and LNEXT */
-#define EXTPROC         0x00000800      /* external processing */
-#define TOSTOP		0x00400000	/* stop background jobs from output */
-#ifndef _POSIX_SOURCE
-#define FLUSHO		0x00800000	/* output being flushed (state) */
-#define	NOKERNINFO	0x02000000	/* no kernel output from VSTATUS */
-#define PENDIN		0x20000000	/* XXX retype pending input (state) */
-#endif  /*_POSIX_SOURCE */
-#define	NOFLSH		0x80000000	/* don't flush after interrupt */
-
-typedef unsigned long	tcflag_t;
-typedef unsigned char	cc_t;
-typedef long		speed_t;
-
-struct termios {
-	tcflag_t	c_iflag;	/* input flags */
-	tcflag_t	c_oflag;	/* output flags */
-	tcflag_t	c_cflag;	/* control flags */
-	tcflag_t	c_lflag;	/* local flags */
-	cc_t		c_cc[NCCS];	/* control chars */
-	long		c_ispeed;	/* input speed */
-	long		c_ospeed;	/* output speed */
-};
-
-/* 
- * Commands passed to tcsetattr() for setting the termios structure.
- */
-#define	TCSANOW		0		/* make change immediate */
-#define	TCSADRAIN	1		/* drain output, then change */
-#define	TCSAFLUSH	2		/* drain output, flush input */
-#ifndef _POSIX_SOURCE
-#define TCSASOFT	0x10		/* flag - don't alter h.w. state */
-#endif
-
-/*
- * Standard speeds
- */
-#define B0	0
-#define B50	50
-#define B75	75
-#define B110	110
-#define B134	134
-#define B150	150
-#define B200	200
-#define B300	300
-#define B600	600
-#define B1200	1200
-#define	B1800	1800
-#define B2400	2400
-#define B4800	4800
-#define B9600	9600
-#define B19200	19200
-#define B38400	38400
-#ifndef _POSIX_SOURCE
-#define EXTA	19200
-#define EXTB	38400
-#endif  /*_POSIX_SOURCE */
-#define B57600	57600
-#define B115200	115200
-
-#ifndef KERNEL
-
-#include <sys/cdefs.h>
-
-__BEGIN_DECLS
-speed_t	cfgetispeed __P((const struct termios *));
-speed_t	cfgetospeed __P((const struct termios *));
-int	cfsetispeed __P((struct termios *, speed_t));
-int	cfsetospeed __P((struct termios *, speed_t));
-int	tcdrain __P((int));
-int	tcflow __P((int, int));
-int	tcflush __P((int, int));
-int	tcgetattr __P((int, struct termios *));
-int	tcsendbreak __P((int, int));
-int	tcsetattr __P((int, int, const struct termios *));
-
-#define	TCIFLUSH	1
-#define	TCOFLUSH	2
-#define TCIOFLUSH	3
-#define	TCOOFF		1
-#define	TCOON		2
-#define TCIOFF		3
-#define TCION		4
+typedef unsigned long   tcflag_t;
+typedef unsigned char   cc_t;
+typedef long            speed_t;
 
 /* 0x54 is just a magic number to make these relatively unique ('T') */
 #define TCGETA          0x5405
 #define TCSETA          0x5406
 
-#ifndef _POSIX_SOURCE
-void	cfmakeraw __P((struct termios *));
-void	cfsetspeed __P((struct termios *, speed_t));
-#endif /* !POSIX */
-__END_DECLS
+int	ioctl(int, unsigned long, ...);
 
-#endif /* !KERNEL */
+#define NCCS		11	/* size of c_cc array */
 
-/*
- * END OF PROTECTED INCLUDE.
- */
-#endif /* !_TERMIOS_H_ */
+/* Primary terminal control structure.  POSIX Table 7-1. */
+struct termios {
+  tcflag_t        c_iflag;	/* input flags */
+  tcflag_t        c_oflag;	/* output flags */
+  tcflag_t        c_cflag;	/* control flags */
+  tcflag_t        c_lflag;	/* local flags */
+  cc_t            c_cc[NCCS];	/* control chars */
 
-#ifndef _POSIX_SOURCE
-#ifdef KERNEL
-#include "ttydefaults.h"
-#else
-#include <sys/ttydefaults.h>
+  /* The rest of the structure is implementation-defined. */
+  speed_t _c_ispeed;		/* input speed */
+  speed_t _c_ospeed;		/* output speed */
+};
+
+/* Values for termios c_iflag bit map.  POSIX Table 7-2. */
+#define BRKINT        000001	/* signal interrupt on break */
+#define ICRNL         000002	/* map CR to NL on input */
+#define IGNBRK        000004	/* ignore break */
+#define IGNCR         000010	/* ignore CR */
+#define IGNPAR        000020	/* ignore characters with parity errors */
+#define INLCR         000100	/* map NL to CR on input */
+#define INPCK         000200	/* enable input parity check */
+#define ISTRIP        000400	/* mask off 8th bit */
+#define IXOFF         001000	/* enable start/stop input control */
+#define IXON          002000	/* enable start/stop output control */
+#define PARMRK        004000	/* mark parity errors in the input queue */
+
+/* Values for termios c_oflag bit map.  POSIX Sec. 7.1.2.3. */
+#define OPOST         000001	/* perform output processing */
+
+/* The following is stolen from <sgtty.h> and must match. */
+#if defined(_MINIX) || !defined(_POSIX_SOURCE)
+#define XTABS	     0006000	/* do tab expansion */
+#define CRMOD	     0000020	/* map lf to cr + lf */
 #endif
-#endif  /*_POSIX_SOURCE */
+
+/* Values for termios c_cflag bit map.  POSIX Table 7-3. */
+#define CLOCAL        000001	/* ignore modem status lines */
+#define CREAD         000002	/* enable receiver */
+#define CSIZE         000014	/* number of bits per character */
+#define CSTOPB        000020	/* send 2 stop bits if set, else 1 */
+#define HUPCL         000040	/* hang up on last close */
+#define PARENB        000100	/* enable parity on output */
+#define PARODD        000200	/* use odd parity if set, else even */
+
+#define CS5           000000	/* if CSIZE is CS5, characters are 5 bits */
+#define CS6           000004	/* if CSIZE is CS6, characters are 6 bits */
+#define CS7           000010	/* if CSIZE is CS7, characters are 7 bits */
+#define CS8           000014	/* if CSIZE is CS8, characters are 8 bits */
+
+/* Values for termios c_lflag bit map.  POSIX Table 7-4. */
+#define ECHOE         000001	/* echo ERASE as backspace */
+#define ECHOK         000002	/* echo KILL */
+#define ECHONL        000004	/* echo NL */
+#define ECHO          000010	/* enable echoing of input characters */
+#define IEXTEN        000020	/* enable extended functions */
+#define ISIG          000040	/* enable signals */
+#define NOFLSH        000100	/* disable flush after interrupt or quit */
+#define TOSTOP        000200	/* send SIGTTOU (job cntrl, not implemented) */
+#define ICANON        000400	/* canonical input (erase and kill enabled) */
+
+/* Indices into c_cc array.  Default values in parentheses. POSIX Table 7-5. */
+#define VEOF               0	/* c_cc[VEOF] = EOF char (CTRL-D) */
+#define VEOL               1	/* c_cc[VEOL] = EOL char (NUL, not impl) */
+#define VERASE             2	/* c_cc[VERASE] = ERASE char (CTRL-H) */
+#define VINTR              3	/* c_cc[VINTR] = INTR char (DEL) */
+#define VKILL              4	/* c_cc[VKILL] = KILL char (@) */
+#define VMIN               5	/* c_cc[VMIN] = MIN value for timer */
+#define VQUIT              6	/* c_cc[VQUIT] = QUIT char (CTRL-\) */
+#define VTIME              7	/* c_cc[VTIME] = TIME value for timer */
+#define VSUSP              8	/* c_cc[VSUSP] = SUSP (job cntrl, not impl) */
+#define VSTART             9	/* c_cc[VSTART] = START char (CTRL-S) */
+#define VSTOP             10	/* c_cc[VSTOP] = STOP char (CTRL-Q) */
+
+/* Values for the baud rate settings.  POSIX Table 7-6. */
+/* Since we are reimplementing this, use a simple encoding.  Perhaps the
+ * constants should be cast to speed_t since that is not an int.
+ */
+#define B0                 0	/* hang up the line */
+#define B50               50
+#define B75               75
+#define B110             110
+#define B134             134
+#define B150             150
+#define B200             200
+#define B300             300
+#define B600             600
+#define B1200           1200
+#define B1800           1800
+#define B2400           2400
+#define B4800           4800
+#define B9600           9600
+#define B19200         19200
+#define B38400         38400
+#if defined(_MINIX) || !defined(_POSIX_SOURCE)
+#define B28800         28800	/* nonstandard */
+#define B57600         57600	/* nonstandard */
+#define B115200       115200	/* nonstandard */
+#endif
+
+/* Optional actions for tcsetattr().  POSIX Sec. 7.2.1.2. */
+#define TCSANOW            1	/* changes take effect immediately */
+#define TCSADRAIN          2	/* changes take effect after output is done */
+#define TCSAFLUSH          3	/* wait for output to finish and flush input */
+
+/* Queue_selector values for tcflush().  POSIX Sec. 7.2.2.2. */
+#define TCIFLUSH           1	/* flush accumulated input data */
+#define TCOFLUSH           2	/* flush accumulated output data */
+#define TCIOFLUSH          3	/* flush accumulated input and output data */
+
+/* Action values for tcflow().  POSIX Sec. 7.2.2.2. */
+#define TCOOFF             1	/* suspend output */
+#define TCOON              2	/* restart suspended output */
+#define TCIOFF             3	/* transmit a STOP character on the line */
+#define TCION              4	/* transmit a START character on the line */
+
+#if defined(_MINIX) || !defined(_POSIX_SOURCE)
+/* Kludge */
+#define _TC_COPY_CRMOD     0
+#define _TC_ALWAYS_CRMOD   1
+#define _TC_NEVER_CRMOD    2
+extern int __tios_crmod;
+#endif
+
+/* Function Prototypes. */
+#ifndef _ANSI_H
+#include <ansi.h>
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+_PROTOTYPE( int tcsendbreak, (int _fildes, int _duration)		);
+_PROTOTYPE( int tcdrain, (int _filedes)					);
+_PROTOTYPE( int tcflush, (int _filedes, int _queue_selector)		);
+_PROTOTYPE( int tcflow, (int _filedes, int _action)			);
+_PROTOTYPE( speed_t cfgetospeed, (const struct termios *_termios_p)	);
+_PROTOTYPE( int cfsetospeed, (struct termios *_termios_p, speed_t _speed) );
+_PROTOTYPE( speed_t cfgetispeed, (const struct termios *_termios_p)	);
+_PROTOTYPE( int cfsetispeed, (struct termios *_termios_p, speed_t _speed) );
+_PROTOTYPE( int tcgetattr, (int _filedes, struct termios *_termios_p)	);
+_PROTOTYPE( int tcsetattr, (int _filedes, int _optional_actions,
+			    const struct termios *_termios_p)		);
+#ifdef __cplusplus
+}
+#endif
+
+#define cfgetispeed(termios_p)		((termios_p)->_c_ispeed)
+#define cfgetospeed(termios_p)		((termios_p)->_c_ospeed)
+#define cfsetispeed(termios_p, speed)	((termios_p)->_c_ispeed = (speed), 0)
+#define cfsetospeed(termios_p, speed)	((termios_p)->_c_ospeed = (speed), 0)
+
+#endif /* _TERMIOS_H */

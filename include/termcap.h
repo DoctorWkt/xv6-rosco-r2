@@ -1,11 +1,13 @@
-#if 0
-int tgetent(char *bp, char *name);
-int tfindent(char *bp, char *name);
-int tnchktc(void);
-int tnamatch(char *np);
-int tgetnum(int id);
-int tgetflag(int id);
-char *tgetstr(char *id, char **area);
-char *tgoto(char *CM, int destcol, int destline);
-int tputs(char *cp, int affcnt, int (*outc)());
-#endif
+#ifndef _TERMCAP_H
+#define _TERMCAP_H
+
+#include <ansi.h>
+
+_PROTOTYPE( int tgetent, (char *_bp, char *_name)			);
+_PROTOTYPE( int tgetflag, (char *_id)					);
+_PROTOTYPE( int tgetnum, (char *_id)					);
+_PROTOTYPE( char *tgetstr, (char *_id, char **_area)			);
+_PROTOTYPE( char *tgoto, (char *_cm, int _destcol, int _destline)	);
+_PROTOTYPE( int tputs, (char *_cp, int _affcnt, void (*_outc)(int))	);
+
+#endif /* _TERMCAP_H */

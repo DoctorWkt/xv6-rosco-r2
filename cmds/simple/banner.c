@@ -23,7 +23,9 @@
 #include <string.h>
 #include <stdio.h>
 
-const char *glyphs[] = {
+_PROTOTYPE(int main, (int argc, char **argv));
+
+char *glyphs[] = {
 	  "         @@@  @@   @@  @ @   @@@@@          @@     @@@  ",
 	  "         @@@  @@   @@  @ @  @  @  @@@   @  @  @    @@@  ",
 	  "         @@@   @   @ @@@@@@@@  @   @@  @    @@      @   ",
@@ -121,7 +123,9 @@ const char *glyphs[] = {
 	  " @    @    @   @@@@@@  @@@     @     @@@         @ @ @ @"
 };
 
-int main(int argc, char *argv[])
+int main(argc, argv)
+int argc;
+char *argv[];
 {
   int a, b, c, len, ind;
   char line[80];

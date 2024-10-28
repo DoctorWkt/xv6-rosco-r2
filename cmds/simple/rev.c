@@ -1,131 +1,74 @@
-/*-
- * Copyright (c) 1987, 1992 The Regents of the University of California.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- */
-
-#ifndef lint
-char copyright[] =
-"@(#) Copyright (c) 1987, 1992 The Regents of the University of California.\n\
- All rights reserved.\n";
-#endif /* not lint */
+/* rev - reverse an ASCII line	  Authors: Paul Polderman & Michiel Huisjes */
 
 #include <sys/types.h>
-#include <errno.h>
-#include <stdio.h>
+#include <fcntl.h>
+#include <blocksize.h>
 #include <stdlib.h>
-#include <string.h>
+#include <unistd.h>
+#include <minix/minlib.h>
 
-void usage __P((void));
-void warn __P((const char *, ...));
+#ifndef EOF
+#define	EOF	((char) -1)
+#endif
 
-int
-main(argc, argv)
-	int argc;
-	char *argv[];
+_PROTOTYPE(int main, (int argc, char **argv));
+_PROTOTYPE(void rev, (void));
+_PROTOTYPE(int nextchar, (void));
+
+int fd;				/* File descriptor from file being read */
+
+int main(argc, argv)
+int argc;
+char *argv[];
 {
-	register char *filename, *p, *t;
-	FILE *fp;
-	size_t len;
-	int ch, rval;
+  register unsigned short i;
 
-	while ((ch = getopt(argc, argv, "")) != EOF)
-		switch(ch) {
-		case '?':
-		default:
-			usage();
-		}
-
-	argc -= optind;
-	argv += optind;
-
-	fp = stdin;
-	filename = "stdin";
-	rval = 0;
-	do {
-		if (*argv) {
-			if ((fp = fopen(*argv, "r")) == NULL) {
-				warn("%s: %s", *argv, strerror(errno));
-				rval = 1;
-				++argv;
-				continue;
-			}
-			filename = *argv++;
-		}
-		while (p = fgetln(fp, &len)) {
-			if (p[len-1] == '\n')
-				--len;
-			t = p + len - 1;
-			for (t = p + len - 1; t >= p; --t)
-				putchar(*t);
-			putchar('\n');
-		}
-		if (ferror(fp)) {
-			warn("%s: %s", filename, strerror(errno));
-			rval = 1;
-		}
-		(void)fclose(fp);
-	} while(*argv);
-	exit(rval);
+  if (argc == 1) {		/* If no arguments given, use stdin as input */
+	fd = 0;
+	rev();
+	exit(0);
+  }
+  for (i = 1; i < argc; i++) {	/* Reverse each line in arguments */
+	if ((fd = open(argv[i], O_RDONLY)) < 0) {
+		std_err("Cannot open ");
+		std_err(argv[i]);
+		std_err("\n");
+		continue;
+	}
+	rev();
+	close(fd);
+  }
+  return(0);
 }
 
-#if __STDC__
-#include <stdarg.h>
-#else
-#include <varargs.h>
-#endif
 
-void
-#if __STDC__
-warn(const char *fmt, ...)
-#else
-warn(fmt, va_alist)
-	char *fmt;
-        va_dcl
-#endif
+
+
+void rev()
 {
-	va_list ap;
-#if __STDC__
-	va_start(ap, fmt);
-#else
-	va_start(ap);
-#endif
-	(void)fprintf(stderr, "rev: ");
-	(void)vfprintf(stderr, fmt, ap);
-	va_end(ap);
-	(void)fprintf(stderr, "\n");
+  char output[BLOCK_SIZE];	/* Contains a reversed line */
+  register unsigned short i;	/* Index in output array */
+
+  do {
+	i = BLOCK_SIZE - 1;
+	while ((output[i] = nextchar()) != '\n' && output[i] != EOF) i--;
+	write(1, &output[i + 1], BLOCK_SIZE - 1 - i); /* write reversed line */
+	if (output[i] == '\n')	/* and write a '\n' */
+		write(1, "\n", 1);
+  } while (output[i] != EOF);
 }
 
-void
-usage()
-{
-	(void)fprintf(stderr, "usage: rev [file ...]\n");
-	exit(1);
+
+char buf[BLOCK_SIZE];
+
+int nextchar()
+{				/* Does a sort of buffered I/O */
+  static int n = 0;		/* Read count */
+  static int i;			/* Index in input buffer to next character */
+
+  if (--n <= 0) {		/* We've had this block. Read in next block */
+	n = read(fd, buf, BLOCK_SIZE);
+	i = 0;			/* Reset index in array */
+  }
+  return((n <= 0) ? EOF : buf[i++]);	/* Return -1 on EOF */
 }

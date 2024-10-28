@@ -6,6 +6,7 @@
  *	Test history overflow
  */
 
+#include <sys/types.h>
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdlib.h>

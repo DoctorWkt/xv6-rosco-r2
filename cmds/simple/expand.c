@@ -11,10 +11,12 @@
 
 int column = 0;			/* Current column, retained between files  */
 
-int main(int argc, char *argv[]);
-void Expand(FILE *f, int tab_index, int tabs[]);
+_PROTOTYPE(int main, (int argc, char **argv));
+_PROTOTYPE(void Expand, (FILE *f, int tab_index, int tabs []));
 
-int main(int argc, char *argv[])
+int main(argc, argv)
+int argc;
+char *argv[];
 {
   int tabs[MAX_TABS];
   int tab_index = 0;		/* Default one tab   */
@@ -56,7 +58,10 @@ int main(int argc, char *argv[])
 }
 
 
-void Expand(FILE *f, int tab_index, int tabs[])
+void Expand(f, tab_index, tabs)
+FILE *f;
+int tab_index;
+int tabs[];
 {
   int next;
   int c;

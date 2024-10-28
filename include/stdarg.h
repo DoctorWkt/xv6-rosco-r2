@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1990 The Regents of the University of California.
+ * Copyright (c) 1991 The Regents of the University of California.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,12 +30,32 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	@(#)stdarg.h	5.6 (Berkeley) 4/3/91
+ *	from: @(#)stdarg.h	7.2 (Berkeley) 5/4/91
+ *	$Id: stdarg.h,v 1.1 2024/09/09 02:49:32 wkt Exp wkt $
  */
 
-#ifndef _STDARG_H
-#define	_STDARG_H
+#ifndef _MACHINE_STDARG_H_
+#define _MACHINE_STDARG_H_ 1
 
-#include <machine/stdarg.h>
+typedef char *va_list;
 
-#endif /* !_STDARG_H */
+#define	__va_size(type) \
+	(((sizeof(type) + sizeof(long) - 1) / sizeof(long)) * sizeof(long))
+
+#define	va_start(ap, last) \
+	((ap) = (va_list)__builtin_next_arg(last))
+
+#define	va_arg(ap, type) \
+	(*(type *)(void *)((ap) += __va_size(type),			\
+			   (ap) - (sizeof(type) < sizeof(long) &&	\
+				   sizeof(type) != __va_size(type) ?	\
+				   sizeof(type) : __va_size(type))))
+
+#define	__va_copy(dest, src) \
+	((dest) = (src))
+
+#define	va_end(ap)	
+
+
+
+#endif /* _MACHINE_STDARG_H_ */
