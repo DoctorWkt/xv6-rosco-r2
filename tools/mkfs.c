@@ -134,8 +134,8 @@ int main(int argc, char *argv[]) {
   nativesb.inodestart = 2 + nlog;
   nativesb.bmapstart = 2 + nlog + ninodeblocks;
 
-  printf("nmeta %d (boot, super, log blocks %u, inode blocks %u, "
-	 "bitmap blocks %u)\nblocks %d total %d\n",
+  printf("%d meta (boot, super, %u log blocks, %u inode blocks, "
+	 "%u bitmap blocks)\n%d blocks free out of %d total\n",
      nmeta, nlog, ninodeblocks, nbitmap, nblocks, FSSIZE);
 #ifdef BIG_ENDIAN_CPU
   printf("big endian\n");
@@ -255,8 +255,8 @@ void balloc(int used) {
   while (1) {
     // All bits in this block are set
     if (used >= BSIZE * 8) {
-      memset(buf, 1, BSIZE);
-      // printf("balloc: write bitmap block at sector %d\n", blocknum);
+      memset(buf, 0xff, BSIZE);
+      // printf("balloc: write full bitmap block at sector %d\n", blocknum);
       wsect(blocknum++, buf);
       used -= BSIZE * 8;
       continue;
