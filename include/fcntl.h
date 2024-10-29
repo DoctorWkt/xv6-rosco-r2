@@ -29,14 +29,14 @@
 #define F_UNLCK            3	/* unlock */
 
 /* Oflag values for open().  POSIX Table 6-4. */
-#define O_CREAT        00100	/* creat file if it doesn't exist */
-#define O_EXCL         00200	/* exclusive use flag */
-#define O_NOCTTY       00400	/* do not assign a controlling terminal */
-#define O_TRUNC        01000	/* truncate flag */
+#define O_CREAT        0x0200	/* creat file if it doesn't exist */
+#define O_TRUNC        0x0400	/* truncate flag */
+#define O_EXCL         0x0800	/* exclusive use flag */
+// #define O_NOCTTY       00400	/* do not assign a controlling terminal */
 
 /* File status flags for open() and fcntl().  POSIX Table 6-5. */
-#define O_APPEND       02000	/* set append mode */
-#define O_NONBLOCK     04000	/* no delay */
+#define O_NONBLOCK     0x0004	/* no delay */
+#define O_APPEND       0x0008	/* set append mode */
 
 /* File access modes for open() and fcntl().  POSIX Table 6-6. */
 #define O_RDONLY           0	/* open(name, O_RDONLY) opens read only */
