@@ -15,7 +15,7 @@ BINS= animals ascii banner basename btoa cal \
       fix fold fortune getlf grep gres \
       head hd hyphenate id ifdef init inodes join kill last less leave ln \
       look lpr ls machine mkdir mkfifo mknod mkproto \
-      modem od paste pr prep \
+      modem mv od paste pr prep \
       printenv proto rev rm rmdir \
       roff sed setdate sh shar size sleep sort split strings stty sum \
       swapfs sync tail tee test touch traverse tr \
