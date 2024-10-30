@@ -17,7 +17,6 @@
 #include <utime.h>
 
 extern void consputc(char ch);
-extern char consgetc(void);
 
 int errno;                      // The kernel location of errno
 
@@ -85,9 +84,9 @@ sys_read(int fd, char *p, int n)
   if(argfd(fd, 0, &f) < 0 || n < 0 || p==0)
     return -1;
 
-  // If the file is the console, return one character from the UART.
+  // If the file is the console, return characters from the UART.
   if (f->type == FD_CONSOLE) {
-    *p= consgetc(); return(1);
+    return(consoleread(p,n));
   }
 
   // Otherwise read from a file

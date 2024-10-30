@@ -42,9 +42,10 @@ long sys_time(long *tloc);
 void sys_stime(long time);
 int sys_sleep(unsigned int N);
 
-// cprintf.c
+// console.c
 void            cprintf(char *fmt, ...);
 void		panic(char *);
+int		consoleread(char *dst, int n);
 
 // exec.c
 void		sys_exec(char *pathname, char *argv[]);

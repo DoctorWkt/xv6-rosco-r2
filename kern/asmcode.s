@@ -294,18 +294,6 @@ consgetc::
 	btst.b  #0,DUART_SRA	; Loop until there is
 	beq.s   .BUSYLOOP	; a character.
 	move.b  DUART_RBA,D0	; Get it into D0
-
-	cmp.b	#1,DUART_CRNL_A	; Do we need to deal with CR?
-	bne.s	L3		; No
-    	cmpi.b	#13,D0		; Is the character a CR?
-	bne.s	L3		; No
-	move.b	#10,D0		; Yes, convert to LF (newline)
-
-L3:
-	cmp.b	#1,DUART_ECHO_A	; Should we echo it?
-	bne.s	.NOECHO		; No, skip
-	jsr	PUTC_WAIT	; Yes, echo it
-.NOECHO
 	rts
 
 ; Set the base register to the byte argument

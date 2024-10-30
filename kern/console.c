@@ -1,7 +1,10 @@
 #include <xv6/types.h>
 #include <xv6/defs.h>
 
+// Console input and output.
+
 extern void consputc(char ch);
+extern char consgetc(void);
 
 static void printint(int xx, int base, int sign) {
   static char digits[] = "0123456789abcdef";
@@ -78,4 +81,27 @@ void panic(char *s) {
   // WKT cli();
   cprintf("panic: %s\n", s);
   while (1);
+}
+
+// Should we echo characters on DUART A?
+// Should we convert CR to NL on DUART A?
+// 1 means yes, 0 means no.
+extern char DUART_ECHO_A;
+extern char DUART_CRNL_A;
+
+// Read up to n characters from 
+// the console and place them in dst.
+int consoleread(char *dst, int n) {
+  char ch;
+
+  // For now, read in one character
+  ch= consgetc();
+
+  // Convert CR to NL as required
+  if (DUART_CRNL_A && ch=='\r') ch='\n';
+
+  // Echo as required
+  if (DUART_ECHO_A) consputc(ch);
+
+  *dst= ch; return(1);
 }
