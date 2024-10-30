@@ -1,7 +1,7 @@
 TOP_SRCDIR = ../..
 include $(TOP_SRCDIR)/Makefile.common
 
-CFLAGS+= -g
+CFLAGS+= -g -D_MINIX
 CFLAGS+= -Wl,--oformat=elf32-m68k -T ../../misc/userland_program.ld
 CFLAGS+= -Wl,-Map=$@.map
 CFLAGS+= -nostdinc -nostdlib
@@ -14,7 +14,7 @@ BINS= animals ascii banner basename btoa cal \
       diskcheck diskusage du dw echo expand expr factor fgrep file \
       fix fold fortune getlf grep gres \
       head hd hyphenate id ifdef init inodes join kill last less leave ln \
-      look lpr ls machine mkdir mkfifo mknod mkproto \
+      look lpr ls machine man men mkdir mkfifo mknod mkproto \
       modem mv od paste pr prep \
       printenv proto rev rm rmdir \
       roff sed setdate sh shar size sleep sort split strings stty sum \
