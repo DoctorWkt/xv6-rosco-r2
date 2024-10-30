@@ -259,6 +259,7 @@ int main()
   do
 	printw("Do you wish to move first: ");
   while (scanf("%c", &ch) != 1);
+  printw("\n");
 #endif
   if ((ch != 'y') && (ch != 'Y')) {
 	i = randommove();	/* If we move first */
