@@ -89,19 +89,59 @@ void panic(char *s) {
 extern char DUART_ECHO_A;
 extern char DUART_CRNL_A;
 
+// The line buffer
+#define INPUT_BUF 128
+static char buf[INPUT_BUF];
+static int bufposn=0;
+static int bufeof=0;
+
 // Read up to n characters from 
 // the console and place them in dst.
 int consoleread(char *dst, int n) {
   char ch;
 
-  // For now, read in one character
-  ch= consgetc();
+  // We can only return INPUT_BUF characters
+  if (n > INPUT_BUF) n= INPUT_BUF;
 
-  // Convert CR to NL as required
-  if (DUART_CRNL_A && ch=='\r') ch='\n';
+  // If we have hit EOF, return -1
+  if (bufeof==1) {
+    bufeof= bufposn= 0; return(-1);
+  }
 
-  // Echo as required
-  if (DUART_ECHO_A) consputc(ch);
+  // Loop trying to get n characters
+  while (bufposn < n) {
+    // Get the next character
+    ch = consgetc();
 
-  *dst= ch; return(1);
+    // Convert CR to NL as required
+    if (DUART_CRNL_A && ch=='\r') ch='\n';
+
+    // Backspace or DEL: remove the last character
+    if (bufposn > 0 && (ch=='\b' || ch== 0x7f)) bufposn--;
+
+    // Echo as required, and deal with backspaces and DELs
+    if (DUART_ECHO_A) {
+      if (ch=='\b' || ch== 0x7f) {
+        consputc('\b'); consputc(' '); consputc('\b'); continue;
+      } else
+        consputc(ch);
+    }
+
+    // If it's a control-D, mark that we have hit EOF
+    if (ch==0x04) { bufeof= 1; break; }
+    
+    // Save the character into the buffer
+    buf[bufposn++] = ch;
+
+    // Leave the loop on newlines
+    if (ch=='\n') break;
+  }
+
+  // If the buffer is empty and we hit EOF,
+  // clear the EOF flag
+  if (bufeof && bufposn==0) bufeof=0;
+
+  // Copy the line and return its length
+  strncpy(dst, buf, bufposn);
+  n= bufposn; bufposn=0; return(n);
 }
