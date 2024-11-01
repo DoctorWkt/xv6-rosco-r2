@@ -58,6 +58,59 @@ int fork1(void);		// Fork but panics on failure.
 void panic(char *);
 struct cmd *parsecmd(char *);
 
+// Return true if the name matches the given pattern.
+// Only ? and * are recognised. This code from Russ Cox:
+// https://research.swtch.com/glob
+int match(char *pattern, char *name) {
+  int px = 0, nx = 0;
+  int nextpx = 0, nextnx = 0;
+  int plen = strlen(pattern);
+  int nlen = strlen(name);
+  char c;
+
+  for (; px < plen || nx < nlen;) {
+    if (px < plen) {
+      c = pattern[px];
+
+      switch (c) {
+      case '?':		// Single character wildcard
+	if (nx < nlen) {
+	  px++;
+	  nx++;
+	  continue;
+	}
+	break;
+
+      case '*':		// Zero or more character wildcard
+	// Try to match at nx. If that
+	// doesn't work out, restart at
+	// nx+1 next.
+	nextpx = px;
+	nextnx = nx + 1;
+	px++;
+	continue;
+
+      default:			// Ordinary character
+	if (nx < nlen && name[nx] == c) {
+	  px++;
+	  nx++;
+	  continue;
+	}
+      }
+    }
+
+    // Mismatch, maybe restart
+    if (0 < nextnx && nextnx <= nlen) {
+      px = nextpx;
+      nx = nextnx;
+      continue;
+    }
+    return (0);
+  }
+  // Matched all of pattern to all of name. Success.
+  return (1);
+}
+
 // Execute cmd.  Never returns.
 void runcmd(struct cmd *cmd) {
   char binbuf[100];
