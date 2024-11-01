@@ -1,17 +1,34 @@
-.CD "sh, ., break, case, cd, continue, eval, exec, exit, export, for, if, read, readonly, set, shift, trap, umask, wait, while \(en shell"
-.SX "sh\fR [\fB\(eneiknqstvxu\fR] [\fB\(enc \fIstr\fR] \fB[\fIfile\fR]"
-.FL "\(enc" "Execute the commands in \fIstr\fR"
-.FL "\(ene" "Quit on error"
-.FL "\(eni" "Interactive mode; ignore QUIT, TERMINATE, INTERRUPT"
-.FL "\(enk" "Look for name=value everywhere on command line"
-.FL "\(enn" "Do not execute commands"
-.FL "\(enq" "Change qflag from sig_ign to sig_del"
-.FL "\(ens" "Read commands from standard input"
-.FL "\(ent" "Exit after reading and executing one command"
-.FL "\(env" "Echo input lines as they are read"
-.FL "\(enx" "Trace"
-.FL "\(enu" "Unset variables"
-.EY "sh script" "Run a shell script"
+.TH SH 1
+.SH NAME
+sh, ., break, case, cd, continue, eval, exec, exit, export, for, if, read, readonly, set, shift, trap, umask, wait, while \- shell
+.SH SYNOPSIS
+\fBsh\fR [\fB\-eiknqstvxu\fR] [\fB\-c \fIstr\fR] \fB[\fIfile\fR]\fR
+.br
+.de FL
+.TP
+\\fB\\$1\\fR
+\\$2
+..
+.de EX
+.TP 20
+\\fB\\$1\\fR
+# \\$2
+..
+.SH OPTIONS
+.FL "\-c" "Execute the commands in \fIstr\fR"
+.FL "\-e" "Quit on error"
+.FL "\-i" "Interactive mode; ignore QUIT, TERMINATE, INTERRUPT"
+.FL "\-k" "Look for name=value everywhere on command line"
+.FL "\-n" "Do not execute commands"
+.FL "\-q" "Change qflag from sig_ign to sig_del"
+.FL "\-s" "Read commands from standard input"
+.FL "\-t" "Exit after reading and executing one command"
+.FL "\-v" "Echo input lines as they are read"
+.FL "\-x" "Trace"
+.FL "\-u" "Unset variables"
+.SH EXAMPLES
+.EX "sh script" "Run a shell script"
+.SH DESCRIPTION
 .PP
 .I Sh
 is the shell, which forms the user's main interface with the system.
@@ -22,7 +39,7 @@ pipes, magic characters, background processes, and shell scripts.  A brief
 summary follows, but whole books have been written on shell programming alone.
 .LP
 Some of the more common notations are:
-.HS
+.PP
 .in +2.45i
 .ta 2i 2.2i
 .ti -2.2i
@@ -40,17 +57,17 @@ sort <file1  >>file2	#	Append output to \fIfile2\fR
 .ti -2.2i
 sort <file1  >file2 &	#	Background job
 .ti -2.2i
-(ls \(enl; a.out) &	#	Run two background commands sequentially
+(ls \-l; a.out) &	#	Run two background commands sequentially
 .ti -2.2i
 sort <file | wc	#	Two-process pipeline
 .ti -2.2i
 sort <f | uniq | wc	#	Three-process pipeline
 .ti -2.2i
-ls \(enl *.c	#	List all files ending in \fI.c\fR
+ls \-l *.c	#	List all files ending in \fI.c\fR
 .ti -2.2i
-ls \(enl [\fIa-c\fR]*	#	List all files beginning with \fIa\fR, \fIb\fR, or \fIc\fR
+ls \-l [\fIa-c\fR]*	#	List all files beginning with \fIa\fR, \fIb\fR, or \fIc\fR
 .ti -2.2i
-ls \(enl ?	#	List all one-character file names
+ls \-l ?	#	List all one-character file names
 .ti -2.2i
 ls \e?	#	List the file whose name is question mark
 .ti -2.2i
@@ -58,13 +75,13 @@ ls \(fm???\(fm	#	List the file whose name is three question marks
 .ti -2.2i
 v=/usr/ast	#	Set shell variable \fIv\fR
 .ti -2.2i
-ls \(enl $v	#	Use shell variable \fIv\fR
+ls \-l $v	#	Use shell variable \fIv\fR
 .ti -2.2i
 PS1=\(fmHi! \(fm	#	Change the primary prompt to \fIHi!\fR
 .ti -2.2i
 PS2=\(fmMore: \(fm	#	Change the secondary prompt to \fIMore:\fR
 .ti -2.2i
-ls \(enl $HOME	#	List the home directory
+ls \-l $HOME	#	List the home directory
 .ti -2.2i
 echo $PATH	#	Echo the search path
 .ti -2.2i
@@ -88,7 +105,7 @@ echo "$@"	#	Echo all parameters without expanding spaces
 .in -2.45i
 .LP
 The shell uses the following variables for specific purposes:
-.HS
+.PP
 .in +2.25i
 .ta 2i
 .ti -2i
@@ -106,7 +123,7 @@ PS2	the secondary shell prompt
 .in -2.25i
 .LP
 There are various forms of substitution on the shell command line:
-.HS
+.PP
 .in +2.25i
 .ta 2i
 .ti -2i
@@ -123,7 +140,7 @@ ${VAR}	Delimits variable VAR from any following string
 .LP
 The expressions below depend on whether or not VAR has ever been set.
 If VAR has been set, they give:
-.HS
+.PP
 .in +2.25i
 .ta 2i
 .ti -2i
@@ -140,7 +157,7 @@ If a colon is placed after VAR, the expressions depend on whether or not
 VAR is currently set and non-null.
 .LP
 The shell has a number of built-in commands:
-.HS
+.PP
 .in +2.25i
 .ta 2i
 .ti -2i
@@ -193,7 +210,7 @@ wait [n]	wait for process pid n; wait for all processes
 .LP
 The shell also contains a programming language, which has the following
 operators and flow control statements:
-.HS
+.PP
 .in +3.50i
 .ta 2i 3.25i
 .ti -3.25i
@@ -207,7 +224,7 @@ operators and flow control statements:
 .ti -3.25i
 (...)	Group	Execute enclosed commands before continuing
 .in -3.50i
-.HS
+.PP
 .in +2.25i
 .ta 2i
 .ti -2i
@@ -237,3 +254,8 @@ until	Do loop end
 .ti -2i
 fi	Conditional statement end
 .in -2.25i
+.SH "SEE ALSO"
+.BR echo (1),
+.BR expr (1),
+.BR pwd (1),
+.BR true (1).

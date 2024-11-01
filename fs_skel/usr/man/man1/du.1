@@ -1,13 +1,29 @@
-.CD "du \(en print disk usage"
-.SX "du\fR [\fB\(enas\fR]\fR [\fB\(enl \fIn\fR] \fIdir\fR ..."
-.FL "\(ena" "Give usage for all files"
-.FL "\(enl" "List up to \fIn\fR levels of subdirectories"
-.FL "\(ens" "Summary only"
+.TH DU 1
+.SH NAME
+du \- print disk usage
+.SH SYNOPSIS
+\fBdu\fR [\fB\-as\fR]\fR [\fB\-l \fIn\fR] \fIdir\fR ...\fR
+.br
+.de FL
+.TP
+\\fB\\$1\\fR
+\\$2
+..
+.de EX
+.TP 20
+\\fB\\$1\\fR
+# \\$2
+..
+.SH OPTIONS
+.FL "\-a" "Give usage for all files"
+.FL "\-l" "List up to \fIn\fR levels of subdirectories"
+.FL "\-s" "Summary only"
+.SH EXAMPLES
 .EX "du dir" "List disk space used by files in dir"
-.EX "du \(ens dir1 dir2" "Give summaries only"
+.EX "du \-s dir1 dir2" "Give summaries only"
+.SH DESCRIPTION
 .PP
 \fIDu\fR examines one or more directories and prints the amount of space 
 occupied by the files in those directories and their subdirectories.
-
-
-
+.SH "SEE ALSO"
+.BR df (1).

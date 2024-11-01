@@ -106,7 +106,7 @@ to zero before the call and check it after.
 .SH NOTES
 All
 .BI get xxx ()
-routines use a static struct that is overwritten by each call.
+routines return a pointer to static storage that is overwritten in each call.
 .PP
 Only
 .B getpwnam()

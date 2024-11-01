@@ -1,15 +1,32 @@
-.CD "uue, uuencode \(en encode a binary file to ASCII (e.g., for mailing)"
-.SX "uue\fR [\fB\(en\fIn\fR] \fIfile\fR [\fB\(en\fR]"
-.FL "\(en\fIn\fR" "How many lines to put in each file"
+.TH UUE 1
+.SH NAME
+uue, uuencode \- encode a binary file to ASCII (e.g., for mailing)
+.SH SYNOPSIS
+\fBuue\fR [\fB\-\fIn\fR] \fIfile\fR [\fB\-\fR]\fR
+.br
+.de FL
+.TP
+\\fB\\$1\\fR
+\\$2
+..
+.de EX
+.TP 20
+\\fB\\$1\\fR
+# \\$2
+..
+.SH OPTIONS
+.FL "\-\fIn\fR" "How many lines to put in each file"
+.SH EXAMPLES
 .EX "uue file" "Encode \fIfile\fR to \fIfile.uue\fR"
-.EX "uue file \(en >x" "Encode \fIfile\fR and write on \fIstdout\fR"
-.EX "uue \(en800 file" "Output on \fIfile.uaa\fR, \fIfile.uab\fR etc."
+.EX "uue file \- >x" "Encode \fIfile\fR and write on \fIstdout\fR"
+.EX "uue \-800 file" "Output on \fIfile.uaa\fR, \fIfile.uab\fR etc."
+.SH DESCRIPTION
 .PP
 \fIUuencode\fR is a famous program that converts an arbitrary (usually binary)
 file to an encoding using only 64 ASCII characters.
 \fIUudecode\fR converts it back to the original file.
 The \fIuue\fR and \fIuud\fR programs are the 
-.MX
+\s-2MINIX\s+2
 versions of these programs, and are compatible with the \s-2UNIX\s0 ones.
 The files produced can even be sent successfully over BITNET, which is 
 notorious for mangling files.
@@ -21,7 +38,6 @@ When \fIuud\fR is given \fIfile.uaa\fR to decode, it automatically includes
 the subsequent pieces.
 The encoding takes 3 bytes (24 bits) from the input file and renders it 
 as 4 bytes in the output file.
-
-
-
-.SP 2
+.SH "SEE ALSO"
+.BR btoa (1),
+.BR uud (1).

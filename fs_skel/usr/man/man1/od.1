@@ -1,15 +1,32 @@
-.CD "od \(en octal dump"
-.SX "od\fR [\fB\(enbcdhox\fR]\fR [\fIfile\fR] [ [\fB+\fR] \fIoffset\fR [\fB.\fR][\fBb\fR]\fR ]"
-.FL "\(enb" "Dump bytes in octal"
-.FL "\(enc" "Dump bytes as ASCII characters"
-.FL "\(end" "Dump words in decimal"
-.FL "\(enh" "Print addresses in hex (default is octal)"
-.FL "\(eno" "Dump words in octal (default)"
-.FL "\(env" "Verbose (list duplicate lines)"
-.FL "\(enx" "Dump words in hex"
-.EX "od \(enox file" "Dump \fIfile\fP in octal and hex"
-.EX "od \(end file +1000" "Dump \fIfile\fP starting at byte 01000"
-.EX "od \(enc file +10.b" "Dump \fIfile\fP starting at block 10"
+.TH OD 1
+.SH NAME
+od \- octal dump
+.SH SYNOPSIS
+\fBod\fR [\fB\-bcdhox\fR]\fR [\fIfile\fR] [ [\fB+\fR] \fIoffset\fR [\fB.\fR][\fBb\fR]\fR ]\fR
+.br
+.de FL
+.TP
+\\fB\\$1\\fR
+\\$2
+..
+.de EX
+.TP 20
+\\fB\\$1\\fR
+# \\$2
+..
+.SH OPTIONS
+.FL "\-b" "Dump bytes in octal"
+.FL "\-c" "Dump bytes as ASCII characters"
+.FL "\-d" "Dump words in decimal"
+.FL "\-h" "Print addresses in hex (default is octal)"
+.FL "\-o" "Dump words in octal (default)"
+.FL "\-v" "Verbose (list duplicate lines)"
+.FL "\-x" "Dump words in hex"
+.SH EXAMPLES
+.EX "od \-ox file" "Dump \fIfile\fP in octal and hex"
+.EX "od \-d file +1000" "Dump \fIfile\fP starting at byte 01000"
+.EX "od \-c file +10.b" "Dump \fIfile\fP starting at block 10"
+.SH DESCRIPTION
 .PP
 .I Od
 dumps a file in one or more formats.
@@ -18,7 +35,4 @@ The \fIoffset\fP argument tells
 .I od
 to skip a certain number of bytes or blocks before starting.
 The offset is in octal bytes, unless it is followed by a 
-\*(OQ.\*(CQ for decimal or \fBb\fP for blocks or both.
-
-
-
+\&'.\&' for decimal or \fBb\fP for blocks or both.

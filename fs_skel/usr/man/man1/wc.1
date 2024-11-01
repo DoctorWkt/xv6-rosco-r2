@@ -1,17 +1,30 @@
-.CD "wc \(en count characters, words, and lines in a file"
-.SX "wc\fR [\fB\(enclw\fR] \fIfile\fR ..."
-.FL "\(enc" "Print character count"
-.FL "\(enl" "Print line count"
-.FL "\(enw" "Print word count"
+.TH WC 1
+.SH NAME
+wc \- count characters, words, and lines in a file
+.SH SYNOPSIS
+\fBwc\fR [\fB\-clw\fR] \fIfile\fR ...\fR
+.br
+.de FL
+.TP
+\\fB\\$1\\fR
+\\$2
+..
+.de EX
+.TP 20
+\\fB\\$1\\fR
+# \\$2
+..
+.SH OPTIONS
+.FL "\-c" "Print character count"
+.FL "\-l" "Print line count"
+.FL "\-w" "Print word count"
+.SH EXAMPLES
 .EX "wc file1 file2" "Print all three counts for both files"
-.EX "wc \(enl file" "Print line count only"
+.EX "wc \-l file" "Print line count only"
+.SH DESCRIPTION
 .PP
 .I Wc
 reads each argument and computes the number of characters, words and lines
 it contains.
 A word is delimited by white space (space, tab, or line feed).
 If no flags are present, all three counts are printed.
-
-
-
-.SP 0.6

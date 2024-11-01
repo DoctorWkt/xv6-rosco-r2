@@ -1,13 +1,30 @@
-.CD "date \(en print or set the date and time"
-.SX "date [\fB\(enqsu\fR] [[\fIMMDDYY\fR]\fIhhmm\fR[\fIss\fR]] [\fI+format\fR]"
-.FL "\(enq" "Read the date from \fIstdin\fR"
-.FL "\(ens" "Set the time (implicit for \fB\(enq\fR or a date string)"
-.FL "\(enu" "Print the date as GMT"
-.FL "\(ent" "Use this number of seconds instead of current time"
+.TH DATE 1
+.SH NAME
+date \- print or set the date and time
+.SH SYNOPSIS
+\fBdate [\fB\-qsu\fR] [[\fIMMDDYY\fR]\fIhhmm\fR[\fIss\fR]] [\fI+format\fR]\fR
+.br
+.de FL
+.TP
+\\fB\\$1\\fR
+\\$2
+..
+.de EX
+.TP 20
+\\fB\\$1\\fR
+# \\$2
+..
+.SH OPTIONS
+.FL "\-q" "Read the date from \fIstdin\fR"
+.FL "\-s" "Set the time (implicit for \fB\-q\fR or a date string)"
+.FL "\-u" "Print the date as GMT"
+.FL "\-t" "Use this number of seconds instead of current time"
+.SH EXAMPLES
 .EX "date" "Print the date and time"
 .EX "date 0221921610" "Set date to Feb 21, 1992 at 4:10 p.m."
+.SH DESCRIPTION
 .PP
-With the \fB\(enq\fR flag or a numeric argument,
+With the \fB\-q\fR flag or a numeric argument,
 .I date
 sets the GMT time and date.
 .I MMDDYY
@@ -17,12 +34,12 @@ refers to the hour, minute and second.
 Each of the six fields must be exactly two digits, no more and no less.
 .I date
 always display the date and time, with the default format for the system.
-The \fB\(enu\fR flag request GMT time instead of local time.
+The \fB\-u\fR flag request GMT time instead of local time.
 A format may be specified with a + followed by a printf-like string with
 the following options:
 .ta 0.25i
 .nf
-.HS
+.PP
 	%%  % character
 	%A  Name of the day
 	%B  Name of the month
@@ -53,7 +70,7 @@ the following options:
 	%w  Decimal day of the week (0=Sunday)
 	%x  Same as %D
 	%y  Decimal year on 2 digits
-.HS
-
-
-
+.SH "SEE ALSO"
+.BR time (2),
+.BR ctime (3),
+.BR readclock (8).

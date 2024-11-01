@@ -1,16 +1,38 @@
-.CD "look \(en look up words in dictionary"
-.SX "look\fR [\fB\(enf\fR] \fIprefix\fR[\fB/\fIsuffix\fR]\fR [\fIdictionary\fR]"
-.FL "\(enf" "Fold upper case letters to lower case"
-.EX "look ard" "Print words starting with \fIard\fR"
-.EX "look /bing" "Print words ending with \fIbing\fR"
-.EX "look \(enf f/ar" "Print words starting with \fIf\fR, ending with \fIar\fR"
-.PP
-\fILook\fR takes a prefix and/or suffix and searches \fI/usr/lib/dict/words\fR
-or the specified dictionary for all words with that match.
-The words are printed.
-The \fB\(enf\fR flag causes all upper case letters to be treated as lower
-case.
-
-
-
-.SP 1.6
+.TH LOOK 1
+.SH NAME
+look \- find lines in a sorted list
+.SH SYNOPSIS
+.B look
+.RB [ \-df ]
+.I string
+.RI [ file ]
+.SH DESCRIPTION
+.B Look
+consults a sorted file and prints all lines that begin with
+.IR string .
+It uses binary search.  The options
+.B \-d
+and
+.B \-f
+affect comparisons as in
+.BR sort (1).
+If no file is specified,
+.B /usr/lib/dict/words
+is assumed with collating sequence
+.BR \-df .
+.SH OPTIONS
+.TP 5
+.B \-d
+Dictionary order: compare letters, digits and whitespace.
+.TP 5
+.B \-f
+Fold. Upper case letters compare equal to lower case.
+.SH FILES
+.TP 25
+.B /usr/lib/dict/words
+Sorted list of English words.
+.SH "SEE ALSO"
+.BR sort (1),
+.BR spell (1).
+.SH AUTHOR
+Kees J. Bot (kjb@cs.vu.nl)
